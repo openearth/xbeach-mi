@@ -1,0 +1,44 @@
+depfile   = z.txt
+posdwn    = 0
+nx        = 600
+ny        = 0
+alfa      = 0
+vardx     = 1
+xfile     = x.txt
+yfile     = y.txt
+xori      = 0
+yori      = 0
+thetamin  = 225
+thetamax  = 315
+dtheta    = 90
+thetanaut = 1
+
+%%% Initial conditions %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+zs0       = 0
+
+%%% Model time %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+tstart    = 0
+tstop     = 10799
+
+%%% Wave boundary condition parameters %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+instat    = jons_table      !< {"instances":["instat"]}
+instat    = stat_table      !< {"instances":["stat"]}
+morfac    = 100             !< {"instances":["stat"]}
+Hrms      = 1.5
+Trep      = 6
+tideloc   = 1
+tidelen   = 4
+zs0file   = tide.txt
+
+%%% Wave-spectrum boundary condition parameters %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+bcfile    = jons_table.txt
+rt        = 600
+dtbc      = 1
+
+%%% Output variables %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+

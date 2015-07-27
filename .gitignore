@@ -1,0 +1,7 @@
+*.pyc
+*.egg-info
+*.dat
+*.nc
+*.bcf
+.instat
+.stat
