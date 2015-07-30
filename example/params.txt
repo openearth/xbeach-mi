@@ -20,15 +20,15 @@ zs0       = 0
 %%% Model time %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 tstart    = 0
-tstop     = 10799
+tstop     = 176399
 
 %%% Wave boundary condition parameters %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 instat    = jons_table      !< {"instances":["instat"]}
 instat    = stat_table      !< {"instances":["stat"]}
 morfac    = 100             !< {"instances":["stat"]}
-Hrms      = 1.5
-Trep      = 6
+facAs     = 1               !< {"instances":["stat"]}
+facSk     = 0               !< {"instances":["stat"]}
 tideloc   = 1
 tidelen   = 4
 zs0file   = tide.txt
@@ -36,9 +36,10 @@ zs0file   = tide.txt
 %%% Wave-spectrum boundary condition parameters %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 bcfile    = jons_table.txt
-rt        = 600
+rt        = 1800
 dtbc      = 1
 
 %%% Output variables %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-
+tint = 176400
+wavint = 600

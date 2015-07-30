@@ -186,6 +186,8 @@ class XBeachMI(IBmi):
     instances = {}
     transition = None
     next_index = 0
+
+    dzmax = 0.05            # maximum bed level change per time step
     
 
     def __init__(self, configfile='', instance=None):
@@ -313,6 +315,7 @@ class XBeachMI(IBmi):
             elif t >= tc - self.config['transition_time']:
                 if not self.transition and instance != self.instance:
                     self.sync_time(instance)
+#                    self.exchange_data(instance)
                     self.transition = {'instance': instance,
                                        'time': tc}
                     logging.info('Start transition to instance "%s"' % instance)
@@ -330,12 +333,11 @@ class XBeachMI(IBmi):
         
         if instance in self.instances.keys():
             if instance != self.instance:
+                logging.info('Set running instance to "%s"' % instance)
                 self.transition = None
                 self.sync_time(instance)
-                self.exchange_data(instance)
+                self.exchange_data(instance, incremental=False)
                 self.instance = instance
-
-                logging.info('Set running instance to "%s"' % instance)
         else:
             raise ValueError('Invalid instance [%s]' % instance)
             
@@ -352,22 +354,46 @@ class XBeachMI(IBmi):
 
         t1 = self._call('get_current_time')
         t2 = self._call('get_current_time', instance=instance)
-        self._call('update', (t1 - t2,), instance=instance)
+        self._call('update', (t2 - t1,), instance=instance)
         
 
-    def exchange_data(self, instance):
+    def exchange_data(self, instance, incremental=True):
         '''Exchange data between current and next running instance
 
         Parameters
         ----------
         instance : str
             name of next running instance
+        incremental : bool
+            switch to maximize bed level change
 
         '''
-        
-        for var in self.config['exchange']:
-            val = self._call('get_var', (var,))
-            self._call('set_var', (var, val), instance=instance)
+
+        if True:
+            for var in self.config['exchange']:
+                logging.debug('Exchanging "%s"...' % var)
+                val = self._call('get_var', (var,))
+                self._call('set_var', (var, val), instance=instance)
+        else:
+            zb = self._call('get_var', ('zb',))
+            
+            zb0 = self._call('get_var', ('zb',), instance=instance)
+            hh = self._call('get_var', ('hh',), instance=instance)
+            wetz = self._call('get_var', ('wetz',), instance=instance)
+    
+            if incremental:
+                dz = zb - zb0
+                dz[dz >  self.dzmax] =  self.dzmax
+                dz[dz < -self.dzmax] = -self.dzmax
+                zb = zb0 + dz
+    
+            if np.any(np.abs(zb-zb0) > self.dzmax + 1e-4):
+                logging.warn('Maximum bed level change exceeded: %0.4f m' % np.max(np.abs(zb-zb0)))
+
+            zs = zb + hh * wetz
+            
+            self._call('set_var', ('zb', zb), instance=instance)
+            self._call('set_var', ('zs', zs), instance=instance)
             
             
     def start(self):
@@ -569,8 +595,8 @@ class XBeachMI(IBmi):
         if not instance:
             instance = self.instance
             
-#        logging.debug('Call "%s" with "(%s)" [%d]' %
-#                      (fcn, ','.join([str(x) for x in args]), os.getpid()))
+        logging.debug('Call "%s" with "(%s)" [%d]' %
+                      (fcn, ','.join([str(x) for x in args]), os.getpid()))
             
         self.instances[instance]['queue_to'].put((fcn, args))
         self.instances[instance]['queue_to'].join()
