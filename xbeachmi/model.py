@@ -312,13 +312,6 @@ class XBeachMI(IBmi):
             if t >= tc:
                 self.set_instance(instance)
                 self.next_index += 1
-            elif t >= tc - self.config['transition_time']:
-                if not self.transition and instance != self.instance:
-                    self.sync_time(instance)
-#                    self.exchange_data(instance)
-                    self.transition = {'instance': instance,
-                                       'time': tc}
-                    logging.info('Start transition to instance "%s"' % instance)
                 
 
     def set_instance(self, instance):
@@ -333,8 +326,13 @@ class XBeachMI(IBmi):
         
         if instance in self.instances.keys():
             if instance != self.instance:
-                logging.info('Set running instance to "%s"' % instance)
-                self.transition = None
+                logging.info('Start transition from running instance to "%s"' % instance)
+                self.transition = {
+                    'time': self._call('get_current_time'),
+                    'vars': {
+                        'zb': self._call('get_var', ('zb',))
+                    }
+                }
                 self.sync_time(instance)
                 self.exchange_data(instance, incremental=False)
                 self.instance = instance
@@ -352,7 +350,7 @@ class XBeachMI(IBmi):
 
         '''
 
-        t1 = self._call('get_current_time')
+        t1 = self._call('get_current_time') - self.config['transition_time']
         t2 = self._call('get_current_time', instance=instance)
         self._call('update', (t2 - t1,), instance=instance)
         
@@ -507,7 +505,6 @@ class XBeachMI(IBmi):
     def inq_compound(self, var):
         raise NotImplemented(
             'BMI extended function "inq_compound" is not implemented yet')
-
     
     
     def inq_compound_field(self, var, field):
@@ -545,17 +542,14 @@ class XBeachMI(IBmi):
         
         self.update_instance()
         self._call('update', (dt,))
-        tc = self._call('get_current_time')
         if self.transition:
-            while True:
-                t = self._call('get_current_time', instance=self.transition['instance'])
-                if t >= tc:
-                    break
-                self._call('update', (tc - t,), instance=self.transition['instance'])
-                logging.debug('Update instance "%s" in parallel for %0.4f seconds...' % (self.transition['instance'],
-                                                                                         tc - t))
-            self.exchange_data(self.transition['instance'])
-        
+            if self._call('get_current_time') < self.transition['time']:
+                for var, val in self.transition['vars'].iteritems():
+                    self._call('set_var', (var, val))
+            else:
+                self.transition = None
+                logging.info('Transition to instance "%s" finished.' % self.instance)
+                    
         
     def finalize(self):
         '''Finalize instance processes'''
