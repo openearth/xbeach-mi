@@ -52,6 +52,7 @@ def initialize(ncfile, dimensions, variables=None, attributes=None, crs=None):
         nc.createDimension('time', 0)
         nc.createDimension('nv', 2)
         nc.createDimension('nv2', 4)
+        nc.createDimension('nv3', 128)
           
         ## add global attributes
         # see http://www.unidata.ucar.edu/software/thredds/current/netcdf-java/formats/DataDiscoveryAttConvention.html
@@ -157,6 +158,15 @@ def initialize(ncfile, dimensions, variables=None, attributes=None, crs=None):
         nc.variables['time'].ancillary_variables = ''
         nc.variables['time'].comment = ''
         
+        nc.createVariable('instance', 'S1', (u'time', u'nv3'))
+        nc.variables['instance'].long_name = 'instance'
+        nc.variables['instance'].standard_name = ''
+        nc.variables['instance'].units = ''
+        nc.variables['instance'].valid_min = 0
+        nc.variables['instance'].valid_max = 0
+        nc.variables['instance'].ancillary_variables = ''
+        nc.variables['instance'].comment = ''
+
         nc.createVariable('x_bounds', 'float32', (u'x', u'nv'))
         nc.variables['x_bounds'].units = 'm'
         nc.variables['x_bounds'].comment = 'x-coordinate values at the upper and lower bounds of each pixel.'

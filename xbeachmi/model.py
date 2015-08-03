@@ -4,6 +4,7 @@ import json
 import shutil
 import logging
 import numpy as np
+from mako.template import Template
 from bmi.wrapper import BMIWrapper
 from bmi.api import IBmi
 from multiprocessing import Process, Queue, JoinableQueue
@@ -94,6 +95,7 @@ class XBeachMIWrapper:
             # get dimension data for each variable
             variables = {v : self.engine.get_var(v) for v in cfg['outputvars']}
             variables['time'] = self.t
+            variables['instance'] = self.engine.instance
         
             netcdf.append(cfg['outputfile'],
                           idx=self.iout,
@@ -260,7 +262,8 @@ class XBeachMI(IBmi):
                     self.instances[instance] = {'process': None,
                                                 'queue_to': JoinableQueue(),
                                                 'queue_from': Queue(),
-                                                'configfile': ''}
+                                                'configfile': '',
+                                                'markers': {}}
 
                     # create hidden model directory
                     subdir = '.%s' % instance
@@ -271,31 +274,27 @@ class XBeachMI(IBmi):
 
                     # create backup of original params.txt file
                     parfile = os.path.join(subdir, fname)
-                    shutil.copyfile(parfile, os.path.join(subdir, '%s~' % fname))
+                    tmplfile = os.path.join(subdir, '%s.tmpl' % fname)
+                    shutil.copyfile(parfile, tmplfile)
 
-                    # read params.txt file
-                    with open(parfile, 'r') as fp:
-                        lines = fp.readlines()
+                    # store mako template markers
+                    self.instances[instance]['markers'] = {
+                        'instance':instance,
+                        'instances':self.instances.keys(),
+                        'path':os.path.abspath(subdir),
+                        'parfile':os.path.abspath(parfile),
+                        'tmplfile':os.path.abspath(tmplfile)
+                    }
 
-                    # write params.txt file, while parsing
-                    # instance-dependent instructions
-                    with open(parfile, 'w') as fp:
-                        for line in lines:
-                            regex = re.compile('\!<\s*(\{.*\})\s*$')
-                            m = regex.search(line)
-                            if m:
-                                cfg = json.loads(m.groups()[0])
-                                if cfg.has_key('instances'):
-                                    if instance not in cfg['instances']:
-                                        continue
+                    self.instances[instance]['configfile'] = os.path.abspath(parfile)
 
-                                # remove instructions
-                                line = regex.sub('\n', line)
-                                
-                            fp.write(line)
-                        
-                    self.instances[instance]['configfile'] = os.path.join(os.getcwd(), parfile)
-        
+                # render templates
+                for instance in self.instances.itervalues():
+                    markers = instance['markers']
+                    template = Template(filename=markers['tmplfile'])
+                    with open(markers['parfile'], 'w') as fp:
+                        rendered = template.render(**markers)
+                        fp.write(rendered)
 
 
     def update_instance(self):
@@ -326,7 +325,7 @@ class XBeachMI(IBmi):
         
         if instance in self.instances.keys():
             if instance != self.instance:
-                logging.info('Start transition from running instance to "%s"' % instance)
+                logging.info('Start transition from running instance to "%s"...' % instance)
                 self.transition = {
                     'time': self._call('get_current_time'),
                     'vars': {
@@ -588,7 +587,7 @@ class XBeachMI(IBmi):
 
         if not instance:
             instance = self.instance
-            
+
         logging.debug('Call "%s" with "(%s)" [%d]' %
                       (fcn, ','.join([str(x) for x in args]), os.getpid()))
             

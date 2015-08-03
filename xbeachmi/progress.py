@@ -6,7 +6,8 @@ from numpy import mod
 class ProgressIndicator:
 
 
-    fmt = '[%5.1f%%] %s / %s / %s (avg. dt=%5.3f)'
+    fmt = ['[%5.1f%%] %s / %s / %s',
+           '         t: %5.3f, avg. dt: %5.3f']
     spaces = {}
     default_space = None
 
@@ -63,11 +64,11 @@ class ProgressIndicator:
             dt3 = dt2 * (1-p)
             
             if p <= 1:
-                logging.info(self.fmt % (p*100.,
-                                         time.strftime('%H:%M:%S', time.gmtime(dt1)),
-                                         time.strftime('%H:%M:%S', time.gmtime(dt2)),
-                                         time.strftime('%H:%M:%S', time.gmtime(dt3)),
-                                         t / self.i))
+                logging.info(self.fmt[0] % (p*100.,
+                                            time.strftime('%H:%M:%S', time.gmtime(dt1)),
+                                            time.strftime('%H:%M:%S', time.gmtime(dt2)),
+                                            time.strftime('%H:%M:%S', time.gmtime(dt3))))
+                logging.info(self.fmt[1] % (t, t / self.i))
 
                 self.touch_space()
                 
