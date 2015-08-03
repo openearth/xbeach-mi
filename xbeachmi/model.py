@@ -277,10 +277,9 @@ class XBeachMI(IBmi):
                     tmplfile = os.path.join(subdir, '%s.tmpl' % fname)
                     shutil.copyfile(parfile, tmplfile)
 
-                    # store mako template markers
+                    # store instance-specific mako template markers
                     self.instances[instance]['markers'] = {
                         'instance':instance,
-                        'instances':self.instances.keys(),
                         'path':os.path.abspath(subdir),
                         'parfile':os.path.abspath(parfile),
                         'tmplfile':os.path.abspath(tmplfile)
@@ -290,7 +289,11 @@ class XBeachMI(IBmi):
 
                 # render templates
                 for instance in self.instances.itervalues():
+
+                    # set global mako template markers
                     markers = instance['markers']
+                    markers['instances'] = self.instances.keys()
+                    
                     template = Template(filename=markers['tmplfile'])
                     with open(markers['parfile'], 'w') as fp:
                         rendered = template.render(**markers)
