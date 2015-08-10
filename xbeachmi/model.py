@@ -270,7 +270,11 @@ class XBeachMI(IBmi):
                     if os.path.exists(subdir):
                         shutil.rmtree(subdir)
                     shutil.copytree(fpath, subdir,
-                                    ignore=lambda src, files: [f for f in files if f.startswith('.')])
+                                    ignore=lambda src, files: [f
+                                                               for f in files
+                                                               if f.startswith('.') or 
+                                                               f.endswith('.nc') or
+                                                               f.endswith('.log')])
 
                     # create backup of original params.txt file
                     parfile = os.path.join(subdir, fname)
