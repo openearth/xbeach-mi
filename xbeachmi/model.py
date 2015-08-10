@@ -165,18 +165,9 @@ class XBeachMI(IBmi):
     information on the configuration
     :func:`~xbeach-mi.model.XBeachMI.load_configfile`.
 
-    The params.txt file may be instance dependent by using instance
-    dependent comments. In the following example the instances
-    "stat_morfac10" and "stat_morfac100" are both run with "instat =
-    stat" and "morfac = 10" or "morfac = 100" respectively. Only the
-    instance "instat" is run with "instat = jons" and no morfac.
-
-    .. code-block:: text
-
-       instat = stat    !< {"instances":["stat_morfac10", "stat_morfac100"]}
-       instat = jons    !< {"instances":["instat"]}
-       morfac = 10      !< {"instances":["stat_morfac10"]}
-       morfac = 100     !< {"instances":["stat_morfac100"]}
+    The params.txt file can be made instance dependent using the Mako
+    templating system. See for more information on the templating
+    options :func:`~xbeach-mi.model.XBeachMI.load_configfile`.
 
     The XBeach library should be compiled with Position Independent
     Compilation (-fPIC compiler flag) in order to support local memory
@@ -220,6 +211,34 @@ class XBeachMI(IBmi):
 
         .. literalinclude:: ../example/config.json
            :language: json
+
+        The params.txt file may be instance dependent by using mako
+        templating syntax. In the following example the instances
+        "stat_morfac10" and "stat_morfac100" are both run with "instat
+        = stat" and "morfac = 10" or "morfac = 100" respectively. Only
+        the instance "instat" is run with "instat = jons" and no
+        morfac.
+        
+        .. code-block:: text
+        
+           % if instance.startswith('stat_'):
+           instat = stat
+           % elif instance.startswith('instat_'):
+           instat = jons
+           % endif
+           
+           % if instance.endsiwth('_morfac10'):
+           morfac = 10
+           % elif instance.endsiwth('_morfac100'):
+           morfac = 100
+           % endif
+
+        Apart from the variable "instance" also the variables "path",
+        "parfile" and "tmplfile" can be used in the params.txt
+        template. These variables refer to the absolute model
+        execution path, the absolute path to the rendered params.txt
+        file and the absolute path to the params.txt template file
+        used.
 
         '''
 
@@ -301,6 +320,7 @@ class XBeachMI(IBmi):
                     template = Template(filename=markers['tmplfile'])
                     with open(markers['parfile'], 'w') as fp:
                         rendered = template.render(**markers)
+                        fp.write('defuse = 0\n') # disable time explosion checks
                         fp.write(rendered)
 
 
