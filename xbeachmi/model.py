@@ -45,7 +45,9 @@ class XBeachMIWrapper:
         with XBeachMI(configfile=self.configfile) as self.engine:
 
             self.t = 0
-            self.progress = progress.ProgressIndicator(duration=self.engine.get_end_time())
+            self.progress = progress.ProgressIndicator(
+                duration=self.engine.get_end_time()
+            )
 
             self.output_init()
             while self.t < self.progress.duration:
@@ -64,21 +66,23 @@ class XBeachMIWrapper:
 
         '''
 
-        logger.debug('Initializing output...')
-        
-        cfg = self.engine.config['netcdf']
+        if self.engine.config.has_key('netcdf'):
 
-        # get dimension names for each variable
-        variables = {
-            v : { 'dimensions' : self.engine.get_dimensions(v) }
-            for v in cfg['outputvars']
-        }
+            logger.debug('Initializing output...')
         
-        netcdf.initialize(cfg['outputfile'],
-                          self.read_dimensions(),
-                          variables=variables,
-                          attributes=cfg['attributes'],
-                          crs=cfg['crs'])
+            cfg = self.engine.config['netcdf']
+
+            # get dimension names for each variable
+            variables = {
+                v : { 'dimensions' : self.engine.get_dimensions(v) }
+                for v in cfg['outputvars']
+            }
+        
+            netcdf.initialize(cfg['outputfile'],
+                              self.read_dimensions(),
+                              variables=variables,
+                              attributes=cfg['attributes'],
+                              crs=cfg['crs'])
 
         self.iout = 0
 
@@ -86,22 +90,24 @@ class XBeachMIWrapper:
     def output(self):
         '''Write model data to netCDF4 output file'''
 
-        cfg = self.engine.config['netcdf']
-
-        if self.progress.check_period(self.t, cfg['interval']):
-
-            logger.debug('Writing output at t=%0.2f...' % self.t)
+        if self.engine.config.has_key('netcdf'):
             
-            # get dimension data for each variable
-            variables = {v : self.engine.get_var(v) for v in cfg['outputvars']}
-            variables['time'] = self.t
-            variables['instance'] = self.engine.instance
-        
-            netcdf.append(cfg['outputfile'],
-                          idx=self.iout,
-                          variables=variables)
+            cfg = self.engine.config['netcdf']
 
-            self.iout += 1
+            if self.progress.check_period(self.t, cfg['interval']):
+
+                logger.debug('Writing output at t=%0.2f...' % self.t)
+                
+                # get dimension data for each variable
+                variables = {v : self.engine.get_var(v) for v in cfg['outputvars']}
+                variables['time'] = self.t
+                variables['instance'] = self.engine.instance
+        
+                netcdf.append(cfg['outputfile'],
+                              idx=self.iout,
+                              variables=variables)
+
+                self.iout += 1
 
 
     def read_dimensions(self):
@@ -244,15 +250,17 @@ class XBeachMI(IBmi):
 
         if os.path.exists(self.configfile):
 
+            logger.debug('Reading configuration file "%s"...' % self.configfile)
+
             # store current working directory
             self.cwd = os.getcwd()
 
             # change working directry to location of configuration file
             if not os.path.isabs(self.configfile):
-                self.configfile = os.path.join(os.getcwd(), self.configfile)
+                self.configfile = os.path.abspath(self.configfile)
             fpath, fname = os.path.split(self.configfile)
             os.chdir(fpath)
-            logging.debug('Changed directory to "%s"' % fpath)
+            logger.debug('Changed directory to "%s"' % fpath)
 
             # load configuration file
             with open(fname, 'r') as fp:
@@ -267,11 +275,21 @@ class XBeachMI(IBmi):
                 if not os.path.isabs(fpath):
                     fpath = os.path.join(os.getcwd(), fpath)
 
+                # get instances
+                instances = []
+                if self.config.has_key('instances'):
+                    instances.extend(self.config['instances'])
+                if self.config.has_key('scenario'):
+                    instances.extend([x[1] for x in self.config['scenario']])
+                instances = np.unique(instances)
+                
                 # create a hidden model directory for each model
                 # instance listed in the configuration file and copy
                 # params.txt file and other model configuration files
                 # to the model directory
-                for instance in np.unique([x[1] for x in self.config['scenario']]):
+                for instance in instances:
+
+                    logger.debug('Creating working directory "%s"...' % instance)
 
                     # set initial running instance
                     if not self.instance:
@@ -316,6 +334,8 @@ class XBeachMI(IBmi):
                     # set global mako template markers
                     markers = instance['markers']
                     markers['instances'] = self.instances.keys()
+
+                    logger.debug('Rendering template "%s"...' % markers['tmplfile'])
                     
                     template = Template(filename=markers['tmplfile'])
                     with open(markers['parfile'], 'w') as fp:
@@ -332,12 +352,14 @@ class XBeachMI(IBmi):
 
         '''
 
-        if self.next_index < len(self.config['scenario']):
-            t = self.get_current_time()
-            tc, instance = self.config['scenario'][self.next_index]
-            if t >= tc:
-                self.set_instance(instance)
-                self.next_index += 1
+        if self.config.has_key('scenario'):
+            if self.next_index < len(self.config['scenario']):
+                logger.debug('Update instance...')
+                t = self.get_current_time()
+                tc, instance = self.config['scenario'][self.next_index]
+                if t >= tc:
+                    self.set_instance(instance)
+                    self.next_index += 1
                 
 
     def set_instance(self, instance):
@@ -349,10 +371,10 @@ class XBeachMI(IBmi):
             name of next running instance
 
         '''
-        
+
         if instance in self.instances.keys():
             if instance != self.instance:
-                logging.info('Start transition from running instance to "%s"...' % instance)
+                logger.info('Start transition from running instance to "%s"...' % instance)
                 self.transition = {
                     'time': self._call('get_current_time'),
                     'vars': {
@@ -376,6 +398,8 @@ class XBeachMI(IBmi):
 
         '''
 
+        logger.debug('Synchronizing time...')
+        
         t1 = self._call('get_current_time') - self.config['transition_time']
         t2 = self._call('get_current_time', instance=instance)
         self._call('update', (t2 - t1,), instance=instance)
@@ -393,37 +417,37 @@ class XBeachMI(IBmi):
 
         '''
 
-        if True:
-            for var in self.config['exchange']:
-                logging.debug('Exchanging "%s"...' % var)
-                val = self._call('get_var', (var,))
-                self._call('set_var', (var, val), instance=instance)
-        else:
-            zb = self._call('get_var', ('zb',))
-            
-            zb0 = self._call('get_var', ('zb',), instance=instance)
-            hh = self._call('get_var', ('hh',), instance=instance)
-            wetz = self._call('get_var', ('wetz',), instance=instance)
-    
-            if incremental:
-                dz = zb - zb0
-                dz[dz >  self.dzmax] =  self.dzmax
-                dz[dz < -self.dzmax] = -self.dzmax
-                zb = zb0 + dz
-    
-            if np.any(np.abs(zb-zb0) > self.dzmax + 1e-4):
-                logging.warn('Maximum bed level change exceeded: %0.4f m' % np.max(np.abs(zb-zb0)))
+        for var in self.config['exchange']:
+            logger.debug('Exchanging "%s"...' % var)
+            val = self._call('get_var', (var,))
+            self._call('set_var', (var, val), instance=instance)
 
-            zs = zb + hh * wetz
-            
-            self._call('set_var', ('zb', zb), instance=instance)
-            self._call('set_var', ('zs', zs), instance=instance)
+#        zb = self._call('get_var', ('zb',))
+#            
+#        zb0 = self._call('get_var', ('zb',), instance=instance)
+#        hh = self._call('get_var', ('hh',), instance=instance)
+#        wetz = self._call('get_var', ('wetz',), instance=instance)
+#    
+#        if incremental:
+#            dz = zb - zb0
+#            dz[dz >  self.dzmax] =  self.dzmax
+#            dz[dz < -self.dzmax] = -self.dzmax
+#            zb = zb0 + dz
+#    
+#        if np.any(np.abs(zb-zb0) > self.dzmax + 1e-4):
+#            logger.warn('Maximum bed level change exceeded: %0.4f m' % np.max(np.abs(zb-zb0)))
+#
+#        zs = zb + hh * wetz
+#            
+#        self._call('set_var', ('zb', zb), instance=instance)
+#        self._call('set_var', ('zs', zs), instance=instance)
             
             
     def start(self):
         '''Start all instance processes'''
         
         for name, instance in self.instances.iteritems():
+            logger.debug('Starting instance "%s"...' % name)
             self.instances[name]['process'].start()
             
             
@@ -431,6 +455,7 @@ class XBeachMI(IBmi):
         '''Wait for all instance processes to be finished'''
         
         for name, instance in self.instances.iteritems():
+            logger.debug('Joining instance "%s"...' % name)
             self.instances[name]['process'].join()
             
             
@@ -448,7 +473,7 @@ class XBeachMI(IBmi):
 
         '''
         
-        logging.debug('start process [%d]' % os.getpid())
+        logger.debug('Process #%d started...' % os.getpid())
 
         # initialize xbeach model
         w = BMIWrapper('xbeach', configfile=parfile)
@@ -468,8 +493,8 @@ class XBeachMI(IBmi):
                     queue_from.put(r)
                 except:
                     # command failed, log and put None to queue
-                    logging.error('Call "%s" with "(%s)" FAILED [%d]' %
-                                  (fcn, ','.join([str(x) for x in args]), os.getpid()))
+                    logger.error('Call "%s" with "(%s)" FAILED [%d]' %
+                                 (fcn, ','.join([str(x) for x in args]), os.getpid()))
                     queue_from.put(None)
 
                 # register task as completed
@@ -539,7 +564,10 @@ class XBeachMI(IBmi):
 
     
     def set_var(self, var, val):
-        self._call('set_var', (var, val))
+        if var == 'instance':
+            self.set_instance(str(val))
+        else:
+            self._call('set_var', (var, val))
         
         
     def set_var_index(self, var, idx):
@@ -556,10 +584,12 @@ class XBeachMI(IBmi):
         '''Initialize and start instance processes'''
         
         for name, instance in self.instances.iteritems():
-            self.instances[name]['process'] = Process(target=self.run,
-                                                      args=(instance['configfile'],
-                                                            self.instances[name]['queue_to'],
-                                                            self.instances[name]['queue_from']))
+            logger.debug('Starting process "%s"...' % name)
+            self.instances[name]['process'] = \
+                Process(target=self.run,
+                        args=(instance['configfile'],
+                              self.instances[name]['queue_to'],
+                              self.instances[name]['queue_from']))
         self.start()
             
             
@@ -574,19 +604,20 @@ class XBeachMI(IBmi):
                     self._call('set_var', (var, val))
             else:
                 self.transition = None
-                logging.info('Transition to instance "%s" finished.' % self.instance)
+                logger.info('Transition to instance "%s" finished.' % self.instance)
                     
         
     def finalize(self):
         '''Finalize instance processes'''
         
         for name, instance in self.instances.iteritems():
+            logger.debug('Finalizing "%s"...' % name)
             self._call('finalize', instance=name)
         self.join()
 
         # change working directory back to original
         os.chdir(self.cwd)
-        logging.debug('Changed directory to "%s"' % self.cwd)
+        logger.debug('Changed directory to "%s"' % self.cwd)
         
         
     def _call(self, fcn, args=(), instance=None):
@@ -615,8 +646,8 @@ class XBeachMI(IBmi):
         if not instance:
             instance = self.instance
 
-        logging.debug('Call "%s" with "(%s)" [%d]' %
-                      (fcn, ','.join([str(x) for x in args]), os.getpid()))
+        logger.debug('Call "%s" with "(%s)" [%d]' %
+                     (fcn, ','.join([str(x) for x in args]), os.getpid()))
             
         self.instances[instance]['queue_to'].put((fcn, args))
         self.instances[instance]['queue_to'].join()
