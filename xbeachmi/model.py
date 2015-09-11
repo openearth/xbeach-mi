@@ -3,11 +3,13 @@ import re
 import json
 import shutil
 import logging
+import traceback
 import numpy as np
 from mako.template import Template
 from bmi.wrapper import BMIWrapper
 from bmi.api import IBmi
 from multiprocessing import Process, Queue, JoinableQueue
+from Queue import Empty, Full
 
 import progress, netcdf, parsers
 
@@ -400,9 +402,23 @@ class XBeachMI(IBmi):
 
         logger.debug('Synchronizing time...')
         
-        t1 = self._call('get_current_time') - self.config['transition_time']
-        t2 = self._call('get_current_time', instance=instance)
-        self._call('update', (t2 - t1,), instance=instance)
+        try:
+            t1 = self._call('get_current_time') - self.config['transition_time']
+        except:
+            logger.error('Failed to get time from "%s"!' % self.instance)
+            logger.error(traceback.format_exc())
+
+        try:
+            t2 = self._call('get_current_time', instance=instance)
+        except:
+            logger.error('Failed to get time from "%s"!' % instance)
+            logger.error(traceback.format_exc())
+
+        try:
+            self._call('update', (t2 - t1,), instance=instance)
+        except:
+            logger.error('Failed to set time in "%s"!' % instance)
+            logger.error(traceback.format_exc())
         
 
     def exchange_data(self, instance, incremental=True):
@@ -419,8 +435,18 @@ class XBeachMI(IBmi):
 
         for var in self.config['exchange']:
             logger.debug('Exchanging "%s"...' % var)
-            val = self._call('get_var', (var,))
-            self._call('set_var', (var, val), instance=instance)
+
+            try:
+                val = self._call('get_var', (var,))
+            except:
+                logger.error('Failed to get "%s" from "%s"!' % (var, self.instance))
+                logger.error(traceback.format_exc())
+
+            try:
+                self._call('set_var', (var, val), instance=instance)
+            except:
+                logger.error('Failed to set "%s" in "%s"!' % (var, instance))
+                logger.error(traceback.format_exc())
 
 #        zb = self._call('get_var', ('zb',))
 #            
@@ -473,7 +499,7 @@ class XBeachMI(IBmi):
 
         '''
         
-        logger.debug('Process #%d started...' % os.getpid())
+        logger.info('Process #%d started...' % os.getpid())
 
         # initialize xbeach model
         w = BMIWrapper('xbeach', configfile=parfile)
@@ -492,7 +518,7 @@ class XBeachMI(IBmi):
                     r = getattr(w, fcn)(*args)
                     queue_from.put(r)
                 except:
-                    # command failed, log and put None to queue
+                    # command failed
                     logger.error('Call "%s" with "(%s)" FAILED [%d]' %
                                  (fcn, ','.join([str(x) for x in args]), os.getpid()))
                     queue_from.put(None)
@@ -597,7 +623,13 @@ class XBeachMI(IBmi):
         '''Update running instance and time'''
         
         self.update_instance()
-        self._call('update', (dt,))
+
+        try:
+            self._call('update', (dt,))
+        except:
+            logger.error('Failed to update "%s"!' % self.instance)
+            logger.error(traceback.format_exc())
+
         if self.transition:
             if self._call('get_current_time') < self.transition['time']:
                 for var, val in self.transition['vars'].iteritems():
