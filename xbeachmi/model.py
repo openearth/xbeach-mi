@@ -183,6 +183,7 @@ class XBeachMI(IBmi):
 
     '''
 
+    engine = 'xbeach'
     instance = None
     instances = {}
     transition = None
@@ -269,6 +270,10 @@ class XBeachMI(IBmi):
                 self.config = json.load(fp)
         else:
             raise IOError('Configuration file not found [%s]' % self.configfile)
+
+        # set engine
+        if self.config.has_key('engine'):
+            self.engine = self.config['engine']
 
         # read params.txt file
         if self.config.has_key('params_file'):
@@ -502,7 +507,7 @@ class XBeachMI(IBmi):
         logger.info('Process #%d started...' % os.getpid())
 
         # initialize xbeach model
-        w = BMIWrapper('xbeach', configfile=parfile)
+        w = BMIWrapper(self.engine, configfile=parfile)
         w.initialize()
 
         # start listening loop
