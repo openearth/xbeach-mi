@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 class XBeachMIWrapper:
-    '''XBeachMI class
+    '''XBeachMIWrapper class
 
     Main class for XBeach MI model wrapper. XBeach MI is a wrapper for
     running multiple parallel instances of the XBeach model.
@@ -103,7 +103,7 @@ class XBeachMIWrapper:
                 # get dimension data for each variable
                 variables = {v : self.engine.get_var(v) for v in cfg['outputvars']}
                 variables['time'] = self.t
-                variables['instance'] = self.engine.instance
+                variables['instance'] = ', '.join(self.engine.running)
         
                 netcdf.append(cfg['outputfile'],
                               idx=self.iout,
@@ -130,7 +130,7 @@ class XBeachMIWrapper:
         dimensions = {}
 
         cfg_xbeach = parsers.XBeachParser(
-            self.engine.instances[self.engine.instance]['configfile']).parse()
+            self.engine.instances[self.engine.running[0]]['configfile']).parse()
 
         # x and y
         if len(cfg_xbeach) > 0:
@@ -162,10 +162,7 @@ class XBeachMI(IBmi):
     new process for every model instance. A single model is updated at
     a time. If the running model instance is changed data between the
     previous and the next model instance is exchanged
-    automatically. Optionally, both model instances are ran parallel
-    for a certain transition time in which the upcoming model instance
-    is updated with the bathymetry of the running model instance,
-    while spinning up its own hydrodynamics.
+    automatically.
 
     The wrapper takes its own JSON configuration file that describes
     what instances should be created and at what moments in the
@@ -184,15 +181,16 @@ class XBeachMI(IBmi):
     '''
 
     engine = 'xbeach'
-    instance = None
+    running = []
     instances = {}
-    transition = None
     next_index = 0
-
+    next_aggegation = 0.
+    data = {}
+    
     dzmax = 0.05            # maximum bed level change per time step
     
 
-    def __init__(self, configfile='', instance=None):
+    def __init__(self, configfile=''):
         '''Initialize class
 
         Parameters
@@ -200,14 +198,10 @@ class XBeachMI(IBmi):
         configfile : str
             path to JSON configuration file, see
             :func:`~xbeach-mi.model.XBeachMI.load_configfile`
-        instance : str
-            initial running instance
 
         '''
         
         self.configfile = configfile
-        self.instance = instance
-
         self.load_configfile()
 
 
@@ -236,9 +230,9 @@ class XBeachMI(IBmi):
            instat = jons
            % endif
            
-           % if instance.endsiwth('_morfac10'):
+           % if instance.endswith('_morfac10'):
            morfac = 10
-           % elif instance.endsiwth('_morfac100'):
+           % elif instance.endswith('_morfac100'):
            morfac = 100
            % endif
 
@@ -287,9 +281,20 @@ class XBeachMI(IBmi):
                 if self.config.has_key('instances'):
                     instances.extend(self.config['instances'])
                 if self.config.has_key('scenario'):
-                    instances.extend([x[1] for x in self.config['scenario']])
+                    for t, i in self.config['scenario']:
+                        if type(i) is list:
+                            instances.extend(i)
+                        else:
+                            instances.append(i)
                 instances = np.unique(instances)
+
+                # check if instances are defined
+                if len(instances) == 0:
+                    raise ValueError('No instances defined')
                 
+                # set initial running instances
+                self.running = list(instances)
+
                 # create a hidden model directory for each model
                 # instance listed in the configuration file and copy
                 # params.txt file and other model configuration files
@@ -297,10 +302,6 @@ class XBeachMI(IBmi):
                 for instance in instances:
 
                     logger.debug('Creating working directory "%s"...' % instance)
-
-                    # set initial running instance
-                    if not self.instance:
-                        self.instance = instance
 
                     # create instance variables
                     self.instances[instance] = {'process': None,
@@ -351,48 +352,51 @@ class XBeachMI(IBmi):
                         fp.write(rendered)
 
 
-    def update_instance(self):
+    def update_instances(self):
         '''Change instance if needed according to scenario
-
-        Change instance according to scenario and initiates transition
-        period just before instance change.
 
         '''
 
         if self.config.has_key('scenario'):
             if self.next_index < len(self.config['scenario']):
-                logger.debug('Update instance...')
                 t = self.get_current_time()
-                tc, instance = self.config['scenario'][self.next_index]
+                tc, instances = self.config['scenario'][self.next_index]
                 if t >= tc:
-                    self.set_instance(instance)
+                    logger.debug('Update instances...')
+                    self.set_instances(instances)
                     self.next_index += 1
-                
+                    return
 
-    def set_instance(self, instance):
+        if self.config.has_key('aggregate'):
+            if self.config['aggregate'].has_key('interval'):
+                t = self._call('get_current_time')
+                if t >= self.next_aggegation:
+                    logger.debug('Aggregate instances...')
+                    self.set_instances(self.running)
+                    self.next_aggegation = t + self.config['aggregate']['interval']
+                    return
+
+
+    def set_instances(self, instances):
         '''Change instance, set time and exchange data
 
         Parameters
         ----------
-        instance : str
-            name of next running instance
+        instances : list
+            list of names of next running instances
 
         '''
 
-        if instance in self.instances.keys():
-            if instance != self.instance:
-                logger.info('Start transition from running instance to "%s"...' % instance)
-                self.transition = {
-                    'time': self._call('get_current_time'),
-                    'vars': {
-                        'zb': self._call('get_var', ('zb',))
-                    }
-                }
+        self.aggregate_data()
+        
+        for instance in instances:
+            if instance in self.instances.keys():
                 self.sync_time(instance)
-                self.exchange_data(instance, incremental=False)
-                self.instance = instance
-        else:
-            raise ValueError('Invalid instance [%s]' % instance)
+                self.exchange_data(instance)
+            else:
+                raise ValueError('Invalid instance [%s]' % instance)
+
+        self.running = instances
             
 
     def sync_time(self, instance):
@@ -408,24 +412,49 @@ class XBeachMI(IBmi):
         logger.debug('Synchronizing time...')
         
         try:
-            t1 = self._call('get_current_time') - self.config['transition_time']
+            t1 = self._call('get_current_time')
         except:
-            logger.error('Failed to get time from "%s"!' % self.instance)
+            logger.error('Failed to get time from "%s"!' % ', '.join(self.running))
             logger.error(traceback.format_exc())
 
         try:
-            t2 = self._call('get_current_time', instance=instance)
+            t2 = self._call('get_current_time', instances=[instance])
         except:
             logger.error('Failed to get time from "%s"!' % instance)
             logger.error(traceback.format_exc())
 
         try:
-            self._call('update', (t2 - t1,), instance=instance)
+            self._call('update', (t2 - t1,), instances=[instance])
         except:
             logger.error('Failed to set time in "%s"!' % instance)
             logger.error(traceback.format_exc())
         
 
+    def aggregate_data(self):
+        '''Aggregate exchange values of instances
+
+        Parameters
+        ----------
+        fcn : callable
+            Aggregation function, takes tuple with arrays as input and
+            converts it to a single aggregated array
+
+        '''
+
+        for var in self.config['exchange']:
+            logger.debug('Aggregating "%s"...' % var)
+
+            vals = []
+            for instance in self.running:
+                try:
+                    vals.append(self._call('get_var', (var,)))
+                except:
+                    logger.error('Failed to get "%s" from "%s"!' % (var, instance))
+                    logger.error(traceback.format_exc())
+
+            self.data[var] = self.aggregate(tuple(vals))
+        
+            
     def exchange_data(self, instance, incremental=True):
         '''Exchange data between current and next running instance
 
@@ -433,8 +462,6 @@ class XBeachMI(IBmi):
         ----------
         instance : str
             name of next running instance
-        incremental : bool
-            switch to maximize bed level change
 
         '''
 
@@ -442,38 +469,32 @@ class XBeachMI(IBmi):
             logger.debug('Exchanging "%s"...' % var)
 
             try:
-                val = self._call('get_var', (var,))
-            except:
-                logger.error('Failed to get "%s" from "%s"!' % (var, self.instance))
-                logger.error(traceback.format_exc())
-
-            try:
-                self._call('set_var', (var, val), instance=instance)
+                self._call('set_var', (var, self.data[var]), instances=[instance])
             except:
                 logger.error('Failed to set "%s" in "%s"!' % (var, instance))
                 logger.error(traceback.format_exc())
+            
+            
+    def aggregate(self, x, method='mean', options={}):
+        
+        x = tuple([0 if i is None else i for i in x])
+        if len(x) > 0:
 
-#        zb = self._call('get_var', ('zb',))
-#            
-#        zb0 = self._call('get_var', ('zb',), instance=instance)
-#        hh = self._call('get_var', ('hh',), instance=instance)
-#        wetz = self._call('get_var', ('wetz',), instance=instance)
-#    
-#        if incremental:
-#            dz = zb - zb0
-#            dz[dz >  self.dzmax] =  self.dzmax
-#            dz[dz < -self.dzmax] = -self.dzmax
-#            zb = zb0 + dz
-#    
-#        if np.any(np.abs(zb-zb0) > self.dzmax + 1e-4):
-#            logger.warn('Maximum bed level change exceeded: %0.4f m' % np.max(np.abs(zb-zb0)))
-#
-#        zs = zb + hh * wetz
-#            
-#        self._call('set_var', ('zb', zb), instance=instance)
-#        self._call('set_var', ('zs', zs), instance=instance)
-            
-            
+            # read config
+            if self.config.has_key('aggregate'):
+                agg = self.config['aggregate']
+                if agg.has_key('method'):
+                    method = agg['method']
+                if agg.has_key('options'):
+                    options = agg['options']
+
+            # apply aggregation
+            if method == 'average':
+                return np.average(x, axis=0, **options)
+            else:
+                raise ValueError('Unsupported aggregation method [%s]' % method)
+    
+
     def start(self):
         '''Start all instance processes'''
         
@@ -627,29 +648,36 @@ class XBeachMI(IBmi):
     def update(self, dt=-1):
         '''Update running instance and time'''
         
-        self.update_instance()
+        self.update_instances()
 
         try:
             self._call('update', (dt,))
+
+            # determine target time
+            target = max([self._call('get_current_time', instances=[instance])
+                          for instance in self.running])
+
+            # make sure all instances keep up with the front runner
+            for instance in self.running:
+                while True:
+                    t = self._call('get_current_time', instances=[instance])
+
+                    if target > t:
+                        self._call('update', (target - t,))
+                    else:
+                        break
+            
         except:
-            logger.error('Failed to update "%s"!' % self.instance)
+            logger.error('Failed to update "%s"!' % ', '.join(self.running))
             logger.error(traceback.format_exc())
 
-        if self.transition:
-            if self._call('get_current_time') < self.transition['time']:
-                for var, val in self.transition['vars'].iteritems():
-                    self._call('set_var', (var, val))
-            else:
-                self.transition = None
-                logger.info('Transition to instance "%s" finished.' % self.instance)
-                    
-        
+            
     def finalize(self):
         '''Finalize instance processes'''
         
-        for name, instance in self.instances.iteritems():
-            logger.debug('Finalizing "%s"...' % name)
-            self._call('finalize', instance=name)
+        for instance in self.instances.iterkeys():
+            logger.debug('Finalizing "%s"...' % instance)
+            self._call('finalize', instances=[instance])
         self.join()
 
         # change working directory back to original
@@ -657,7 +685,7 @@ class XBeachMI(IBmi):
         logger.debug('Changed directory to "%s"' % self.cwd)
         
         
-    def _call(self, fcn, args=(), instance=None):
+    def _call(self, fcn, args=(), instances=None):
         '''Subprocess function caller
 
         Calls a function in a subprocess and returns the result via
@@ -668,10 +696,10 @@ class XBeachMI(IBmi):
         ----------
         fcn : str
             name of function
-        args : tuple
+        args : tuple, optional
             function arguments
-        instance : str
-            name of instance for calling the function
+        instance : str or list, optional
+            name(s) of instance(s) for calling the function
 
         Returns
         -------
@@ -680,17 +708,28 @@ class XBeachMI(IBmi):
 
         '''
 
-        if not instance:
-            instance = self.instance
+        if not instances:
+            instances = self.running
 
-        logger.debug('Call "%s" with "(%s)" [%d]' %
-                     (fcn, ','.join([str(x) for x in args]), os.getpid()))
-            
-        self.instances[instance]['queue_to'].put((fcn, args))
-        self.instances[instance]['queue_to'].join()
-        return self.instances[instance]['queue_from'].get()
+        if type(instances) is not list:
+            instances = [instances]
 
-    
+        #logger.debug('Call "%s" with "(%s)" [%d]' %
+        #             (fcn, ','.join([str(x) for x in args]), os.getpid()))
+
+        vals = []
+        for instance in instances:
+            self.instances[instance]['queue_to'].put((fcn, args))
+        for instance in instances:
+            self.instances[instance]['queue_to'].join()
+            vals.append(self.instances[instance]['queue_from'].get())
+
+        if len(vals) > 1:
+            return self.aggregate(vals)
+        else:
+            return vals[0]
+
+
     @staticmethod
     def get_dimensions(var):
         '''Return dimensions of a given variable
