@@ -212,7 +212,7 @@ class XBeachMI(IBmi):
         directories for each instance. The JSON configuration file may
         contain the following:
 
-        .. literalinclude:: ../example/config.json
+        .. literalinclude:: ../example/sequential/config.json
            :language: json
 
         The params.txt file may be instance dependent by using mako
@@ -353,9 +353,16 @@ class XBeachMI(IBmi):
 
 
     def update_instances(self):
-        '''Change instance if needed according to scenario
+        '''Change and/or update running instances'''
 
-        '''
+        if self.config.has_key('aggregate'):
+            if self.config['aggregate'].has_key('interval'):
+                t = self._call('get_current_time')
+                if t >= self.next_aggegation:
+                    logger.debug('Aggregate instances...')
+                    self.set_instances(self.running)
+                    self.next_aggegation = t + self.config['aggregate']['interval']
+                    return
 
         if self.config.has_key('scenario'):
             if self.next_index < len(self.config['scenario']):
@@ -367,18 +374,9 @@ class XBeachMI(IBmi):
                     self.next_index += 1
                     return
 
-        if self.config.has_key('aggregate'):
-            if self.config['aggregate'].has_key('interval'):
-                t = self._call('get_current_time')
-                if t >= self.next_aggegation:
-                    logger.debug('Aggregate instances...')
-                    self.set_instances(self.running)
-                    self.next_aggegation = t + self.config['aggregate']['interval']
-                    return
-
 
     def set_instances(self, instances):
-        '''Change instance, set time and exchange data
+        '''Change running instance, set time and exchange data
 
         Parameters
         ----------
@@ -400,12 +398,12 @@ class XBeachMI(IBmi):
             
 
     def sync_time(self, instance):
-        '''Synchronize time between current and next running instance
+        '''Synchronize time between running instances and given instance
 
         Parameters
         ----------
         instance : str
-            name of next running instance
+            name of instance to be synced
 
         '''
 
@@ -431,15 +429,7 @@ class XBeachMI(IBmi):
         
 
     def aggregate_data(self):
-        '''Aggregate exchange values of instances
-
-        Parameters
-        ----------
-        fcn : callable
-            Aggregation function, takes tuple with arrays as input and
-            converts it to a single aggregated array
-
-        '''
+        '''Aggregate exchange values of running instances and store in aggregated storage'''
 
         for var in self.config['exchange']:
             logger.debug('Aggregating "%s"...' % var)
@@ -455,13 +445,13 @@ class XBeachMI(IBmi):
             self.data[var] = self.aggregate(tuple(vals))
         
             
-    def exchange_data(self, instance, incremental=True):
-        '''Exchange data between current and next running instance
+    def exchange_data(self, instance):
+        '''Exchange data from aggregated storage to given instance
 
         Parameters
         ----------
         instance : str
-            name of next running instance
+            name of instance to be updated
 
         '''
 
@@ -476,6 +466,23 @@ class XBeachMI(IBmi):
             
             
     def aggregate(self, x, method='mean', options={}):
+        '''Aggregate values
+
+        Parameters
+        ----------
+        x : tuple
+            Tuple with values to be aggregated
+        method : str
+            Aggregation method (e.g. 'mean')
+        options : dict
+            Key/value pair options for aggregation method
+
+        Returns
+        -------
+        misc
+            Aggregated value of same type as original values in ``x``
+
+        '''
         
         x = tuple([0 if i is None else i for i in x])
         if len(x) > 0:
@@ -646,16 +653,32 @@ class XBeachMI(IBmi):
             
             
     def update(self, dt=-1):
-        '''Update running instance and time'''
+        '''Update running instances and time
+
+        All instances take one time step. Afterwards it is checked
+        whether all instances are at the same point in time. If not,
+        the lagging instances are updated further to match the given
+        time step, if given, or the front runner instance otherwise.
+
+        Parameters
+        ----------
+        dt : float
+            Time step
+
+        '''
         
         self.update_instances()
 
         try:
+            t = self._call('get_current_time')
             self._call('update', (dt,))
 
             # determine target time
-            target = max([self._call('get_current_time', instances=[instance])
-                          for instance in self.running])
+            if dt > 0.:
+                target = t + dt
+            else:
+                target = max([self._call('get_current_time', instances=[instance])
+                              for instance in self.running])
 
             # make sure all instances keep up with the front runner
             for instance in self.running:
@@ -698,8 +721,8 @@ class XBeachMI(IBmi):
             name of function
         args : tuple, optional
             function arguments
-        instance : str or list, optional
-            name(s) of instance(s) for calling the function
+        instances : list, optional
+            names of instances for calling the function
 
         Returns
         -------
