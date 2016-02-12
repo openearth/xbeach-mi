@@ -15,13 +15,15 @@ applications are:
 
 #. Running XBeach with multiple wind conditions and averaging the result (MORMERGE)
 
-The XBeach MI Python wrapper is BMI compatible.
+A BMI-compatible version of XBeach is needed to use with the XBeach MI
+Python wrapper. The wrapper itself is also BMI compatible.
    
 Contents:
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
+   installation
    example
    sourcecode
 

@@ -12,7 +12,7 @@
     "netcdf" : {
         "outputfile" : "xbeachmi.nc",
         "outputvars" : ["zb", "zs", "zs0", "H"],
-        "interval" : 3600,
+        "interval" : 600,
         "crs" : {
             "grid_mapping_name" : "oblique_stereographic",
             "epsg_code" : "EPSG:28992",

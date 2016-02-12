@@ -24,12 +24,12 @@ tstop     = 3599
 
 %%% Wave boundary condition parameters %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-instat    = jons_table
 tideloc   = 1
 zs0file   = tide.txt
 
 %%% Wave-spectrum boundary condition parameters %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+instat    = jons_table
 % if instance == 'waves1':
 bcfile    = jons_table1.txt
 % elif instance == 'waves2':
