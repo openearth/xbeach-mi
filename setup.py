@@ -10,7 +10,7 @@ setup(
     long_description=open('README.txt').read(),
     install_requires=[
         'numpy',
-#        'docopt',
+        'docopt',
         'bmi',
         'multiprocessing',
     ],
@@ -26,9 +26,4 @@ setup(
         '{0} = xbeachmi.cmd:cmd'.format(
             'xbeach-mi'),
     ]},
-    data_files=[
-        ('example', [
-            "example/",
-        ])
-    ],
 )
