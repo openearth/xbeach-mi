@@ -1,0 +1,4 @@
+#!/bin/bash
+rank=$OMPI_COMM_WORLD_RANK
+export PYTHONUNBUFFERED=1
+python ../cmd.py config.json 2>err.$rank | tee out.$rank

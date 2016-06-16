@@ -1,0 +1,2 @@
+mpiexec -n 2 python ../cmd.py config1.json 2>&1|tee out
+grep '^model *1' out >out1 ; grep '^model *0' out > out0

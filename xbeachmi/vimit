@@ -1,0 +1,3 @@
+#!/bin/bash
+./outit
+gvim -O --cmd 'set ar' err? out?

@@ -1,0 +1,7 @@
+#!/bin/bash
+for f in err out; do
+   for i in 0 1 2; do
+      #grep "^model    [DE][A-Z][A-Z][A-Z][A-Z] *$i " err.$i > err$i 
+      sed "s/^/$i /" $f.$i > $f$i
+   done
+done

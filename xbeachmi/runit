@@ -1,0 +1,3 @@
+#!/bin/bash
+#mpiexec -n 3 python ../cmd.py config1.json 2>&1|tee out
+mpiexec -n 3 ./wrap
