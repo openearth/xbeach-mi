@@ -3,6 +3,8 @@
 Created on Wed Apr 20 18:13:20 2016
 
 @author: dro
+
+wvermin: trying to optimize this. In statu nascendi
 """
 import sys
 #from numpy import *
