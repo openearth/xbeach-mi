@@ -14,6 +14,7 @@ import timeit as tm
 import bisect
 import matplotlib.pyplot as plt
 from inspect import currentframe
+import itertools as it
 
 def getln():  # get line number
     cf = currentframe()
@@ -151,8 +152,8 @@ def mkmap(x1, y1, mask, x2, y2):
     #filled = np.zeros((m1, n1))
     #iflag  = np.zeros(np.size(x2), dtype=int)
     nrin   = np.zeros(np.size(x2), dtype=int)
-    xp     = np.zeros((m1,n1,5))
-    yp     = np.zeros((m1,n1,5))
+    xp     = np.zeros((m1-1,n1-1,5))
+    yp     = np.zeros((m1-1,n1-1,5))
     iref   = np.zeros((4, n2), dtype=int)
     w      = np.zeros((4, n2))
     #ipl    = -1
@@ -194,31 +195,31 @@ def mkmap(x1, y1, mask, x2, y2):
     print getln(),xpt[:,:,0]-xp[:m1-1,:n1-1,0]
 
     xpt[:,:,1]    = x1[1:m1,:n1-1]
-
-    print getln(),xpt[:,:,1]-xp[:m1-1,:n1-1,1]
-
     xpt[:,:,2] = x1[1:m1,1:n1]
-    print getln(),xpt[:,:,2]-xp[:m1-1,:n1-1,2]
     xpt[:,:,3]    = x1[:m1-1,1:n1]
-    print getln(),xpt[:,:,3]-xp[:m1-1,:n1-1,3]
     xpt[:,:,4]       = x1[:m1-1,:n1-1]
-    print getln(),xpt[:,:,4]-xp[:m1-1,:n1-1,4]
     print getln(),np.sum(np.abs(xpt-xp[:m1-1,:n1-1,:]))
-    sys.exit(0)
 
+    ilo=np.zeros((m1-1,n1-1),dtype='int32')
+    ihi=np.zeros_like(ilo)
+    jlo=np.zeros_like(ilo)
+    jhi=np.zeros_like(ilo)
+    selx=[[0 for j in range(n1-1)] for i in range(m1-1)]
+    sely=[[0 for j in range(n1-1)] for i in range(m1-1)]
+    nrin=[[0 for j in range(n1-1)] for i in range(m1-1)]
     for j1 in range(n1 - 1):
         print getln(),'twee',j1
         for i1 in range(m1 - 1):
             if mask[i1, j1] == 0 or mask[i1 + 1, j1] == 0 or mask[i1 + 1, j1 + 1] == 0 or mask[i1, j1 + 1] == 0:
                 break
-            ilo = bisect.bisect_left(xs, xpmin[i1,j1])
-            ihi = bisect.bisect_right(xs, xpmax[i1,j1], lo=ilo)
-            jlo = bisect.bisect_left(ys, ypmin[i1,j1])
-            jhi = bisect.bisect_right(ys, ypmax[i1,j1], lo=jlo)
-            selx = nrx[ilo:ihi]
-            sely = nry[jlo:jhi]
-            nrin = list(set(selx) & set(sely))
-            nin = np.size(nrin)
+            ilo[i1,j1] = bisect.bisect_left(xs, xpmin[i1,j1])
+            ihi[i1,j1] = bisect.bisect_right(xs, xpmax[i1,j1], lo=ilo[i1,j1])
+            jlo[i1,j1] = bisect.bisect_left(ys, ypmin[i1,j1])
+            jhi[i1,j1] = bisect.bisect_right(ys, ypmax[i1,j1], lo=jlo[i1,j1])
+            selx[i1][j1] = nrx[ilo[i1,j1]:ihi[i1,j1]]
+            sely[i1][j1] = nry[jlo[i1,j1]:jhi[i1,j1]]
+            nrin[i1][j1] = list(set(selx[i1][j1]) & set(sely[i1][j1]))
+            nin = np.size(nrin[i1][j1])
             #
             # Check whether selected points of grid2 lie within the cell
             # using function IPON; if so, determine weights W of the surrounding
@@ -226,7 +227,7 @@ def mkmap(x1, y1, mask, x2, y2):
             # The reference to grid1 is saved in arrays Iref and Jref.
             #
             for iin in range(0, nin):
-                i2 = nrin[iin]
+                i2 = nrin[i1][j1][iin]
                 # print i1,j1,iin,i2
                 inout = ipon(xp[i1,j1], yp[i1,j1], x2[i2], y2[i2])
                 if inout >= 0:
@@ -237,6 +238,44 @@ def mkmap(x1, y1, mask, x2, y2):
                     iref[2, i2] = i1 + 1 + (j1 + 1) * m1
                     iref[3, i2] = i1 + (j1 + 1) * m1
                     # print i1,j1,i2
+
+    ilot = np.array(map(lambda x: bisect.bisect_left(xs,x),xpmin.flatten()))
+    ilot.resize((m1-1,n1-1))
+    print getln(),ilo-ilot
+    ihit = np.array(map(lambda x,y: bisect.bisect_right(xs,x,lo=y),xpmax.flatten(),ilot.flatten()))
+    ihit.resize((m1-1,n1-1))
+    print getln(),ihi-ihit
+    jlot = np.array(map(lambda x: bisect.bisect_left(ys,x),ypmin.flatten()))
+    jlot.resize((m1-1,n1-1))
+    print getln(),jlo-jlot
+    jhit = np.array(map(lambda x,y: bisect.bisect_right(ys,x,lo=y),ypmax.flatten(),jlot.flatten()))
+    jhit.resize((m1-1,n1-1))
+    print getln(),jhi-jhit
+    selxt = map(lambda x,y: nrx[x:y],ilot.flatten(),ihit.flatten())
+    selxf = []
+    map(lambda x: selxf.extend(x),selx)
+    print getln(),type(selxt),type(selxf)
+    print getln(),len(selxt),len(selxf)
+    xsum = 0
+    for row1, row2 in it.izip(selxt,selxf):
+        r1 = np.array(row1)
+        r2 = np.array(row2)
+        xsum +=np.sum(np.abs(r1-r2))
+    print getln(),'xsum',xsum
+
+    selyt = map(lambda x,y: nrx[x:y],jlot.flatten(),jhit.flatten())
+    selyf = []
+    map(lambda x: selyf.extend(x),sely)
+    print getln(),type(selyt),type(selyf)
+    print getln(),len(selyt),len(selyf)
+    ysum = 0
+    for row1, row2 in it.izip(selyt,selyf):
+        r1 = np.array(row1)
+        r2 = np.array(row2)
+        ysum +=np.sum(np.abs(r1-r2))
+    print getln(),'ysum',ysum
+
+    sys.exit(0)
     return w, iref
 
 
