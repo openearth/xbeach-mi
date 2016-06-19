@@ -5,6 +5,12 @@ Created on Wed Apr 20 18:13:20 2016
 @author: dro
 
 wvermin: trying to optimize this. In statu nascendi
+
+2016-06-19: still in statu nascendi, and probably not bug free.
+I found that the speedup attained (less then a factor 2) is not worthwhile
+so I abandoned this.
+
+Suggest to pythonise the fortran version using f2py
 """
 import sys
 #from numpy import *
@@ -153,7 +159,6 @@ def mkmap(x1, y1, mask, x2, y2):
     m1 = np.size(x1, 0)
     n1 = np.size(x1, 1)
     n2 = np.size(x2)
-    print getln(),m1,n1,n2
     #filled = np.zeros((m1, n1))
     #iflag  = np.zeros(np.size(x2), dtype=int)
     nrin   = np.zeros(np.size(x2), dtype=int)
@@ -164,121 +169,68 @@ def mkmap(x1, y1, mask, x2, y2):
     #ipl    = -1
 
     
+#            if mask[i1, j1] == 0 or mask[i1 + 1, j1] == 0 or mask[i1 + 1, j1 + 1] == 0 or mask[i1, j1 + 1] == 0:
+#                break
+
+    xp     = np.zeros((m1-1,n1-1,5))
+    yp     = np.zeros((m1-1,n1-1,5))
+    xp[:,:,0] = x1[:m1-1,:n1-1]
+    xp[:,:,1] = x1[1:m1,:n1-1]
+    xp[:,:,2] = x1[1:m1,1:n1]
+    xp[:,:,3] = x1[:m1-1,1:n1]
+    xp[:,:,4] = x1[:m1-1,:n1-1]
+
+    yp[:,:,0] = y1[:m1-1,:n1-1]
+    yp[:,:,1] = y1[1:m1,:n1-1]
+    yp[:,:,2] = y1[1:m1,1:n1]
+    yp[:,:,3] = y1[:m1-1,1:n1]
+    yp[:,:,4] = y1[:m1-1,:n1-1]
+
+    # Determine minimum and maximum X and Y of the cell
+    #
+    xpmin = np.min(xp,2).flatten()
+    xpmax = np.max(xp,2).flatten()
+    ypmin = np.min(yp,2).flatten()
+    ypmax = np.max(yp,2).flatten()
+
+    ilo   = np.zeros((m1-1)*(n1-1),dtype=np.int32)
+    ihi   = np.zeros_like(ilo)
+    jlo   = np.zeros_like(ilo)
+    jhi   = np.zeros_like(ilo)
+    selx  = [[0 for j in range(n1-1)] for i in range(m1-1)]
+    sely  = [[0 for j in range(n1-1)] for i in range(m1-1)]
+    nrin  = [[0 for j in range(n1-1)] for i in range(m1-1)]
+
+
+    bbl = bisect.bisect_left
+    bbr = bisect.bisect_right
+
+    ilo = np.array(map(lambda x: bbl(xs,x),xpmin))
+
+    ihi = np.array(map(lambda x,y: bbr(xs,x,lo=y),xpmax,ilo))
+
+    jlo = np.array(map(lambda x: bbl(ys,x),ypmin))
+
+    jhi = np.array(map(lambda x,y: bbr(ys,x,lo=y),ypmax,jlo))
+
+    selx = map(lambda x,y: nrx[x:y],ilo,ihi.flatten())
+
+    sely = map(lambda x,y: nrx[x:y],jlo,jhi)
+
+    nrin = map(lambda x,y: np.array(sorted(list(set(x) & set(y))),dtype=np.int32),selx,sely)
+    print getln(),len(nrin),type(nrin),type(nrin[0])
+
+    print getln(),'entering loop'
+    inout = np.zeros((m1-1,n1-1),dtype=np.int32)
+    k1 = -1
     for j1 in range(n1 - 1):
-        print getln(),'een',j1
-        for i1 in range(m1 - 1):
-#         for i1 in range(4):
-            #
-            # Cell definition
-            #
-#            tic()
-            if mask[i1, j1] == 0 or mask[i1 + 1, j1] == 0 or mask[i1 + 1, j1 + 1] == 0 or mask[i1, j1 + 1] == 0:
-                break
-            xp[i1,j1,0] = x1[i1, j1]
-            xp[i1,j1,1] = x1[i1 + 1, j1]
-            xp[i1,j1,2] = x1[i1 + 1, j1 + 1]
-            xp[i1,j1,3] = x1[i1, j1 + 1]
-            xp[i1,j1,4] = x1[i1, j1]
-            yp[i1,j1,0] = y1[i1, j1]
-            yp[i1,j1,1] = y1[i1 + 1, j1]
-            yp[i1,j1,2] = y1[i1 + 1, j1 + 1]
-            yp[i1,j1,3] = y1[i1, j1 + 1]
-            yp[i1,j1,4] = y1[i1, j1]
-            # Determine minimum and maximum X and Y of the cell
-            #
-            xpmin = np.min(xp,2)
-            xpmax = np.max(xp,2)
-            ypmin = np.min(yp,2)
-            ypmax = np.max(yp,2)
-
-            #print getln(),xpmin.shape,':',xp.shape
-
-    xpt     = np.zeros((m1-1,n1-1,5))
-    ypt     = np.zeros((m1-1,n1-1,5))
-    xpt[:,:,0]       = x1[:m1-1,:n1-1]
-    print getln(),xp.shape
-    print getln(),xpt[:,:,0]-xp[:m1-1,:n1-1,0]
-
-    xpt[:,:,1]    = x1[1:m1,:n1-1]
-    xpt[:,:,2] = x1[1:m1,1:n1]
-    xpt[:,:,3]    = x1[:m1-1,1:n1]
-    xpt[:,:,4]       = x1[:m1-1,:n1-1]
-    print getln(),np.sum(np.abs(xpt-xp[:m1-1,:n1-1,:]))
-
-    ilo=np.zeros((m1-1,n1-1),dtype='int32')
-    ihi=np.zeros_like(ilo)
-    jlo=np.zeros_like(ilo)
-    jhi=np.zeros_like(ilo)
-    selx=[[0 for j in range(n1-1)] for i in range(m1-1)]
-    sely=[[0 for j in range(n1-1)] for i in range(m1-1)]
-    nrin=[[0 for j in range(n1-1)] for i in range(m1-1)]
-    inout=np.zeros((m1-1,n1-1),dtype=np.int32)
-    i2=np.zeros((m1-1,n1-1),dtype=np.int32)
-    for j1 in range(n1 - 1):
-        print getln(),'twee',j1
-        for i1 in range(m1 - 1):
-            if mask[i1, j1] == 0 or mask[i1 + 1, j1] == 0 or mask[i1 + 1, j1 + 1] == 0 or mask[i1, j1 + 1] == 0:
-                break
-            ilo[i1,j1] = bisect.bisect_left(xs, xpmin[i1,j1])
-            ihi[i1,j1] = bisect.bisect_right(xs, xpmax[i1,j1], lo=ilo[i1,j1])
-            jlo[i1,j1] = bisect.bisect_left(ys, ypmin[i1,j1])
-            jhi[i1,j1] = bisect.bisect_right(ys, ypmax[i1,j1], lo=jlo[i1,j1])
-            selx[i1][j1] = nrx[ilo[i1,j1]:ihi[i1,j1]]
-            sely[i1][j1] = nry[jlo[i1,j1]:jhi[i1,j1]]
-            nrin[i1][j1] = list(set(selx[i1][j1]) & set(sely[i1][j1]))
-            nrin[i1][j1].sort()
-
-
-    ilot = np.array(map(lambda x: bisect.bisect_left(xs,x),xpmin.flatten()))
-    ilot.resize((m1-1,n1-1))
-    print getln(),ilo-ilot
-    ihit = np.array(map(lambda x,y: bisect.bisect_right(xs,x,lo=y),xpmax.flatten(),ilot.flatten()))
-    ihit.resize((m1-1,n1-1))
-    print getln(),ihi-ihit
-    jlot = np.array(map(lambda x: bisect.bisect_left(ys,x),ypmin.flatten()))
-    jlot.resize((m1-1,n1-1))
-    print getln(),jlo-jlot
-    jhit = np.array(map(lambda x,y: bisect.bisect_right(ys,x,lo=y),ypmax.flatten(),jlot.flatten()))
-    jhit.resize((m1-1,n1-1))
-    print getln(),jhi-jhit
-    selxt = map(lambda x,y: nrx[x:y],ilot.flatten(),ihit.flatten())
-    selxf = flat2(selx)
-    print getln(),type(selxt),type(selxf)
-    print getln(),len(selxt),len(selxf)
-    xsum = 0
-    for row1, row2 in it.izip(selxt,selxf):
-        r1 = np.array(row1)
-        r2 = np.array(row2)
-        xsum +=np.sum(np.abs(r1-r2))
-    print getln(),'xsum',xsum
-
-    selyt = map(lambda x,y: nrx[x:y],jlot.flatten(),jhit.flatten())
-    selyf = flat2(sely)
-    print getln(),type(selyt),type(selyf)
-    print getln(),len(selyt),len(selyf)
-    ysum = 0
-    for row1, row2 in it.izip(selyt,selyf):
-        r1 = np.array(row1)
-        r2 = np.array(row2)
-        ysum +=np.sum(np.abs(r1-r2))
-    print getln(),'ysum',ysum
-
-    nrint = map(lambda x,y: sorted(list(set(x) & set(y))),selxf,selyf)
-    nrinf = flat2(nrin)
-    nsum = 0
-    for row1, row2 in it.izip(nrint,nrinf):
-        r1 = np.array(row1)
-        r2 = np.array(row2)
-        nsum += np.sum(np.abs(r1-r2))
-    print getln(),'nsum',nsum
-
-    for j1 in range(n1 - 1):
-        print getln(),'een',j1
         for i1 in range(m1 - 1):
             if mask[i1, j1] == 0 or mask[i1 + 1, j1] == 0 or mask[i1 + 1, j1 + 1] == 0 or mask[i1, j1 + 1] == 0:
                 break
 
-            nin = np.size(nrin[i1][j1])
+            #nin = np.size(nrin[i1][j1])
+            k1 += 1
+            nin = np.size(nrin[k1])
             #
             # Check whether selected points of grid2 lie within the cell
             # using function IPON; if so, determine weights W of the surrounding
@@ -286,7 +238,8 @@ def mkmap(x1, y1, mask, x2, y2):
             # The reference to grid1 is saved in arrays Iref and Jref.
             #
             for iin in range(0, nin):
-                i2 = nrin[i1][j1][iin]
+                #i2 = nrin[i1][j1][iin]
+                i2 = nrin[k1][iin]
                 # print i1,j1,iin,i2
                 inout[i1,j1] = ipon(xp[i1,j1], yp[i1,j1], x2[i2], y2[i2])
                 if inout[i1,j1] >= 0:
@@ -297,8 +250,6 @@ def mkmap(x1, y1, mask, x2, y2):
                     iref[2, i2] = i1 + 1 + (j1 + 1) * m1
                     iref[3, i2] = i1 + (j1 + 1) * m1
                     # print i1,j1,i2
-    #inoutt = map(lambda x,y,xx,yy: ipon(np.resize(xp,((m1-1)*(n1-1)),
-    #    np.resize(yp,((m1-1)*(n1-1)),
 
     #sys.exit(0)
     return w, iref
@@ -436,13 +387,15 @@ toc()
 # Test mkmap and grmap functions
 tic()
 print 'testing mkmap and grmap; preparation'
+#orig:
 m1 = 200
 n1 = 600
+#
 dx = 10.
 dy = 10.
 
-m1=20
-n1=60
+#m1=20
+#n1=60
 
 xori = 0.
 yori = 0.
@@ -469,11 +422,13 @@ m2 = 50
 n2 = 500
 dx2 = 20.
 dy2 = 5.
+# orig:
 xori = 500.
 yori = 2000.
+#
 
-xori = 50.
-yori = 200.
+#xori = 50.
+#yori = 200.
 
 alfa = 30. * np.pi / 180.
 cosa = np.cos(alfa)
