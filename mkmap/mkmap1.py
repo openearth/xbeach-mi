@@ -202,22 +202,30 @@ def mkmap(x1, y1, mask, x2, y2):
     nrin  = [[0 for j in range(n1-1)] for i in range(m1-1)]
 
 
-    bbl = bisect.bisect_left
-    bbr = bisect.bisect_right
+    tic()
+    ilo = xs.searchsorted(xpmin,'left')
 
-    ilo = np.array(map(lambda x: bbl(xs,x),xpmin))
+    ihi = xs.searchsorted(xpmax,'right')
 
-    ihi = np.array(map(lambda x,y: bbr(xs,x,lo=y),xpmax,ilo))
+    jlo = ys.searchsorted(ypmin,'left')
 
-    jlo = np.array(map(lambda x: bbl(ys,x),ypmin))
-
-    jhi = np.array(map(lambda x,y: bbr(ys,x,lo=y),ypmax,jlo))
-
+    jhi = ys.searchsorted(ypmax,'right')
+    toc()
+    print getln(),'*****'
+    tic()
     selx = map(lambda x,y: nrx[x:y],ilo,ihi)
+    toc()
+    print getln(),'*****'
 
+    tic()
     sely = map(lambda x,y: nrx[x:y],jlo,jhi)
+    toc()
+    print getln(),'*****'
 
+    tic()
     nrin = map(lambda x,y: np.array(sorted(list(set(x) & set(y))),dtype=np.int32),selx,sely)
+    toc()
+    print getln(),'*****'
     print getln(),len(nrin),type(nrin),type(nrin[0])
 
     print getln(),'entering loop'
