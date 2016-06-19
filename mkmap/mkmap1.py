@@ -213,7 +213,7 @@ def mkmap(x1, y1, mask, x2, y2):
 
     jhi = np.array(map(lambda x,y: bbr(ys,x,lo=y),ypmax,jlo))
 
-    selx = map(lambda x,y: nrx[x:y],ilo,ihi.flatten())
+    selx = map(lambda x,y: nrx[x:y],ilo,ihi)
 
     sely = map(lambda x,y: nrx[x:y],jlo,jhi)
 
