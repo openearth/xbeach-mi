@@ -20,6 +20,11 @@ def getln():  # get line number
     cf = currentframe()
     return 'line '+str(cf.f_back.f_lineno)+':'
 
+def flat2(x):
+    ''' flattens 2-d matrix '''
+    y=[]
+    map(y.extend,x)
+    return y
 
 def tic():
     # Homemade version of matlab tic and toc functions
@@ -207,6 +212,8 @@ def mkmap(x1, y1, mask, x2, y2):
     selx=[[0 for j in range(n1-1)] for i in range(m1-1)]
     sely=[[0 for j in range(n1-1)] for i in range(m1-1)]
     nrin=[[0 for j in range(n1-1)] for i in range(m1-1)]
+    inout=np.zeros((m1-1,n1-1),dtype=np.int32)
+    i2=np.zeros((m1-1,n1-1),dtype=np.int32)
     for j1 in range(n1 - 1):
         print getln(),'twee',j1
         for i1 in range(m1 - 1):
@@ -219,25 +226,8 @@ def mkmap(x1, y1, mask, x2, y2):
             selx[i1][j1] = nrx[ilo[i1,j1]:ihi[i1,j1]]
             sely[i1][j1] = nry[jlo[i1,j1]:jhi[i1,j1]]
             nrin[i1][j1] = list(set(selx[i1][j1]) & set(sely[i1][j1]))
-            nin = np.size(nrin[i1][j1])
-            #
-            # Check whether selected points of grid2 lie within the cell
-            # using function IPON; if so, determine weights W of the surrounding
-            # values in grid1 using function bilin. Save the weights in Wtab
-            # The reference to grid1 is saved in arrays Iref and Jref.
-            #
-            for iin in range(0, nin):
-                i2 = nrin[i1][j1][iin]
-                # print i1,j1,iin,i2
-                inout = ipon(xp[i1,j1], yp[i1,j1], x2[i2], y2[i2])
-                if inout >= 0:
-                    w[:, i2], ier = bilin5(xp[i1,j1], yp[i1,j1], x2[i2], y2[i2])
-                       #
-                    iref[0, i2] = i1 + j1 * m1
-                    iref[1, i2] = i1 + 1 + j1 * m1
-                    iref[2, i2] = i1 + 1 + (j1 + 1) * m1
-                    iref[3, i2] = i1 + (j1 + 1) * m1
-                    # print i1,j1,i2
+            nrin[i1][j1].sort()
+
 
     ilot = np.array(map(lambda x: bisect.bisect_left(xs,x),xpmin.flatten()))
     ilot.resize((m1-1,n1-1))
@@ -252,8 +242,7 @@ def mkmap(x1, y1, mask, x2, y2):
     jhit.resize((m1-1,n1-1))
     print getln(),jhi-jhit
     selxt = map(lambda x,y: nrx[x:y],ilot.flatten(),ihit.flatten())
-    selxf = []
-    map(lambda x: selxf.extend(x),selx)
+    selxf = flat2(selx)
     print getln(),type(selxt),type(selxf)
     print getln(),len(selxt),len(selxf)
     xsum = 0
@@ -264,8 +253,7 @@ def mkmap(x1, y1, mask, x2, y2):
     print getln(),'xsum',xsum
 
     selyt = map(lambda x,y: nrx[x:y],jlot.flatten(),jhit.flatten())
-    selyf = []
-    map(lambda x: selyf.extend(x),sely)
+    selyf = flat2(sely)
     print getln(),type(selyt),type(selyf)
     print getln(),len(selyt),len(selyf)
     ysum = 0
@@ -275,7 +263,44 @@ def mkmap(x1, y1, mask, x2, y2):
         ysum +=np.sum(np.abs(r1-r2))
     print getln(),'ysum',ysum
 
-    sys.exit(0)
+    nrint = map(lambda x,y: sorted(list(set(x) & set(y))),selxf,selyf)
+    nrinf = flat2(nrin)
+    nsum = 0
+    for row1, row2 in it.izip(nrint,nrinf):
+        r1 = np.array(row1)
+        r2 = np.array(row2)
+        nsum += np.sum(np.abs(r1-r2))
+    print getln(),'nsum',nsum
+
+    for j1 in range(n1 - 1):
+        print getln(),'een',j1
+        for i1 in range(m1 - 1):
+            if mask[i1, j1] == 0 or mask[i1 + 1, j1] == 0 or mask[i1 + 1, j1 + 1] == 0 or mask[i1, j1 + 1] == 0:
+                break
+
+            nin = np.size(nrin[i1][j1])
+            #
+            # Check whether selected points of grid2 lie within the cell
+            # using function IPON; if so, determine weights W of the surrounding
+            # values in grid1 using function bilin. Save the weights in Wtab
+            # The reference to grid1 is saved in arrays Iref and Jref.
+            #
+            for iin in range(0, nin):
+                i2 = nrin[i1][j1][iin]
+                # print i1,j1,iin,i2
+                inout[i1,j1] = ipon(xp[i1,j1], yp[i1,j1], x2[i2], y2[i2])
+                if inout[i1,j1] >= 0:
+                    w[:, i2], ier = bilin5(xp[i1,j1], yp[i1,j1], x2[i2], y2[i2])
+                       #
+                    iref[0, i2] = i1 + j1 * m1
+                    iref[1, i2] = i1 + 1 + j1 * m1
+                    iref[2, i2] = i1 + 1 + (j1 + 1) * m1
+                    iref[3, i2] = i1 + (j1 + 1) * m1
+                    # print i1,j1,i2
+    #inoutt = map(lambda x,y,xx,yy: ipon(np.resize(xp,((m1-1)*(n1-1)),
+    #    np.resize(yp,((m1-1)*(n1-1)),
+
+    #sys.exit(0)
     return w, iref
 
 
@@ -413,10 +438,12 @@ tic()
 print 'testing mkmap and grmap; preparation'
 m1 = 200
 n1 = 600
-m1=10
-n1=30
 dx = 10.
 dy = 10.
+
+m1=20
+n1=60
+
 xori = 0.
 yori = 0.
 alfa = 20. * np.pi / 180.
@@ -444,6 +471,10 @@ dx2 = 20.
 dy2 = 5.
 xori = 500.
 yori = 2000.
+
+xori = 50.
+yori = 200.
+
 alfa = 30. * np.pi / 180.
 cosa = np.cos(alfa)
 sina = np.sin(alfa)
