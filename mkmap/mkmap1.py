@@ -11,6 +11,8 @@ I found that the speedup attained (less then a factor 2) is not worthwhile
 so I abandoned this.
 
 Suggest to pythonise the fortran version using f2py
+
+But, I found something... wait
 """
 import sys
 #from numpy import *
@@ -174,20 +176,22 @@ def mkmap(x1, y1, mask, x2, y2):
 
     xp     = np.zeros((m1-1,n1-1,5))
     yp     = np.zeros((m1-1,n1-1,5))
-    xp[:,:,0] = x1[:m1-1,:n1-1]
-    xp[:,:,1] = x1[1:m1,:n1-1]
-    xp[:,:,2] = x1[1:m1,1:n1]
-    xp[:,:,3] = x1[:m1-1,1:n1]
-    xp[:,:,4] = x1[:m1-1,:n1-1]
 
-    yp[:,:,0] = y1[:m1-1,:n1-1]
-    yp[:,:,1] = y1[1:m1,:n1-1]
-    yp[:,:,2] = y1[1:m1,1:n1]
-    yp[:,:,3] = y1[:m1-1,1:n1]
-    yp[:,:,4] = y1[:m1-1,:n1-1]
+    xp[:,:,0] = x1[  :m1-1,  :n1-1 ]
+    xp[:,:,1] = x1[ 1:m1,    :n1-1 ]
+    xp[:,:,2] = x1[ 1:m1,   1:n1   ]
+    xp[:,:,3] = x1[  :m1-1, 1:n1   ]
+    xp[:,:,4] = x1[  :m1-1,  :n1-1 ]
+
+    yp[:,:,0] = y1[  :m1-1,  :n1-1 ]
+    yp[:,:,1] = y1[ 1:m1,    :n1-1 ]
+    yp[:,:,2] = y1[ 1:m1,   1:n1   ]
+    yp[:,:,3] = y1[  :m1-1, 1:n1   ]
+    yp[:,:,4] = y1[  :m1-1,  :n1-1 ]
 
     # Determine minimum and maximum X and Y of the cell
     #
+
     xpmin = np.min(xp,2).flatten()
     xpmax = np.max(xp,2).flatten()
     ypmin = np.min(yp,2).flatten()
@@ -202,7 +206,6 @@ def mkmap(x1, y1, mask, x2, y2):
     nrin  = [[0 for j in range(n1-1)] for i in range(m1-1)]
 
 
-    tic()
     ilo = xs.searchsorted(xpmin,'left')
 
     ihi = xs.searchsorted(xpmax,'right')
@@ -210,34 +213,29 @@ def mkmap(x1, y1, mask, x2, y2):
     jlo = ys.searchsorted(ypmin,'left')
 
     jhi = ys.searchsorted(ypmax,'right')
-    toc()
-    print getln(),'*****'
-    tic()
-    selx = map(lambda x,y: nrx[x:y],ilo,ihi)
-    toc()
-    print getln(),'*****'
 
-    tic()
-    sely = map(lambda x,y: nrx[x:y],jlo,jhi)
-    toc()
-    print getln(),'*****'
+    selx = map(nrx.__getslice__,ilo,ihi)
 
-    tic()
-    nrin = map(lambda x,y: np.array(sorted(list(set(x) & set(y))),dtype=np.int32),selx,sely)
-    toc()
+    sely = map(nry.__getslice__,jlo,jhi)
+
+    # this one is time consuming:
+    nrin = map(np.intersect1d,selx,sely)
+
+    #for jj in range(n1-1):
+    #    for ii in range(m1-1):
+    #        kk = ii*(n1-1) + jj
+    #        print 'nrin',list(sorted(nrin[kk]))
+
     print getln(),'*****'
-    print getln(),len(nrin),type(nrin),type(nrin[0])
 
     print getln(),'entering loop'
-    inout = np.zeros((m1-1,n1-1),dtype=np.int32)
-    k1 = -1
     for j1 in range(n1 - 1):
         for i1 in range(m1 - 1):
             if mask[i1, j1] == 0 or mask[i1 + 1, j1] == 0 or mask[i1 + 1, j1 + 1] == 0 or mask[i1, j1 + 1] == 0:
                 break
 
             #nin = np.size(nrin[i1][j1])
-            k1 += 1
+            k1 = i1*(n1-1) + j1
             nin = np.size(nrin[k1])
             #
             # Check whether selected points of grid2 lie within the cell
@@ -249,8 +247,8 @@ def mkmap(x1, y1, mask, x2, y2):
                 #i2 = nrin[i1][j1][iin]
                 i2 = nrin[k1][iin]
                 # print i1,j1,iin,i2
-                inout[i1,j1] = ipon(xp[i1,j1], yp[i1,j1], x2[i2], y2[i2])
-                if inout[i1,j1] >= 0:
+                inout = ipon(xp[i1,j1], yp[i1,j1], x2[i2], y2[i2])
+                if inout >= 0:
                     w[:, i2], ier = bilin5(xp[i1,j1], yp[i1,j1], x2[i2], y2[i2])
                        #
                     iref[0, i2] = i1 + j1 * m1
@@ -259,7 +257,6 @@ def mkmap(x1, y1, mask, x2, y2):
                     iref[3, i2] = i1 + (j1 + 1) * m1
                     # print i1,j1,i2
 
-    #sys.exit(0)
     return w, iref
 
 
@@ -382,6 +379,7 @@ for i in range(np.size(xp)):
         for j in range(4):
             zp[i] = zp[i] + w[j, i] * z[j]
 toc()
+print getln(), '*****'
 tic()
 if Plot:
     print 'plotting result of ipon and bilin5'
@@ -392,6 +390,7 @@ if Plot:
     plt.plot(x, y, 'k')
     plt.savefig('plot11.png')
 toc()
+print getln(), '*****'
 # Test mkmap and grmap functions
 tic()
 print 'testing mkmap and grmap; preparation'
@@ -454,14 +453,17 @@ y2 = yori + np.dot(m2t,dx2t*sina)+np.dot(dy2t*cosa,n2t)
 
 print 'grid 1 ', m1 * n1, ' points, grid 2 ', m2 * n2, ' points'
 toc()
+print getln(), '*****'
 tic()
 print 'testing mkmap'
 w, iref = mkmap(x1, y1, mask, x2, y2)
 toc()
+print getln(), '*****'
 tic()
 print 'testing grmap'
 z2 = grmap(z1, z2, iref, w)
 toc()
+print getln(), '*****'
 tic()
 if Plot:
     print 'plotting results'
@@ -473,12 +475,14 @@ if Plot:
     plt.savefig('plot12.png')
 # plt.pcolor(x2,y2,z2)
 toc()
+print getln(), '*****'
 tic()
 print 'shift hump in grid 1 and interpolate again'
 y0 = 3500.
 z1 = amp * np.exp(-((x1 - x0) ** 2 + (y1 - y0) ** 2) / L ** 2)
 z2 = grmap(z1, z2, iref, w)
 toc()
+print getln(), '*****'
 tic()
 if Plot:
     print 'plot results'
@@ -489,3 +493,4 @@ if Plot:
     plt.axis('equal')
     plt.savefig('plot13.png')
 toc()
+print getln(), '*****'
