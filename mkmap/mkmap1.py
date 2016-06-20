@@ -22,7 +22,7 @@ import timeit as tm
 import bisect
 import matplotlib.pyplot as plt
 from inspect import currentframe
-import itertools as it
+from itertools import izip
 
 def getln():  # get line number
     cf = currentframe()
@@ -171,9 +171,6 @@ def mkmap(x1, y1, mask, x2, y2):
     #ipl    = -1
 
     
-#            if mask[i1, j1] == 0 or mask[i1 + 1, j1] == 0 or mask[i1 + 1, j1 + 1] == 0 or mask[i1, j1 + 1] == 0:
-#                break
-
     xp     = np.zeros((m1-1,n1-1,5))
     yp     = np.zeros((m1-1,n1-1,5))
 
@@ -194,41 +191,24 @@ def mkmap(x1, y1, mask, x2, y2):
 
     xpmin = np.min(xp,2).flatten()
     xpmax = np.max(xp,2).flatten()
+
     ypmin = np.min(yp,2).flatten()
     ypmax = np.max(yp,2).flatten()
 
-    ilo   = np.zeros((m1-1)*(n1-1),dtype=np.int32)
-    ihi   = np.zeros_like(ilo)
-    jlo   = np.zeros_like(ilo)
-    jhi   = np.zeros_like(ilo)
-    selx  = [[0 for j in range(n1-1)] for i in range(m1-1)]
-    sely  = [[0 for j in range(n1-1)] for i in range(m1-1)]
-    nrin  = [[0 for j in range(n1-1)] for i in range(m1-1)]
-
-
     ilo = xs.searchsorted(xpmin,'left')
-
     ihi = xs.searchsorted(xpmax,'right')
 
     jlo = ys.searchsorted(ypmin,'left')
-
     jhi = ys.searchsorted(ypmax,'right')
 
-    selx = map(nrx.__getslice__,ilo,ihi)
-
-    sely = map(nry.__getslice__,jlo,jhi)
+    selx = [nrx[x:y] for x,y in izip(ilo,ihi)]
+    sely = [nry[x:y] for x,y in izip(jlo,jhi)]
 
     # this one is time consuming:
-    nrin = map(np.intersect1d,selx,sely)
-
-    #for jj in range(n1-1):
-    #    for ii in range(m1-1):
-    #        kk = ii*(n1-1) + jj
-    #        print 'nrin',list(sorted(nrin[kk]))
-
-    print getln(),'*****'
+    nrin = [np.intersect1d(x,y) for x,y in izip(selx,sely)]
 
     print getln(),'entering loop'
+
     for j1 in range(n1 - 1):
         for i1 in range(m1 - 1):
             if mask[i1, j1] == 0 or mask[i1 + 1, j1] == 0 or mask[i1 + 1, j1 + 1] == 0 or mask[i1, j1 + 1] == 0:
@@ -243,19 +223,17 @@ def mkmap(x1, y1, mask, x2, y2):
             # values in grid1 using function bilin. Save the weights in Wtab
             # The reference to grid1 is saved in arrays Iref and Jref.
             #
-            for iin in range(0, nin):
+            for iin in range(nin):
                 #i2 = nrin[i1][j1][iin]
                 i2 = nrin[k1][iin]
-                # print i1,j1,iin,i2
                 inout = ipon(xp[i1,j1], yp[i1,j1], x2[i2], y2[i2])
                 if inout >= 0:
                     w[:, i2], ier = bilin5(xp[i1,j1], yp[i1,j1], x2[i2], y2[i2])
-                       #
+
                     iref[0, i2] = i1 + j1 * m1
                     iref[1, i2] = i1 + 1 + j1 * m1
                     iref[2, i2] = i1 + 1 + (j1 + 1) * m1
                     iref[3, i2] = i1 + (j1 + 1) * m1
-                    # print i1,j1,i2
 
     return w, iref
 
@@ -279,11 +257,8 @@ def grmap(f1, f2, iref, w):
     #
     # executable statements -------------------------------------------------------
     #
-    f1 = f1.transpose()
-    f1 = f1.flatten()
-    # print f1
+    f1 = f1.T.flatten()
     f2 = f2.flatten()
-    # print f2
     n1 = np.size(f1)
     Np = np.size(iref, 0)
     n2 = np.size(iref, 1)
@@ -291,16 +266,16 @@ def grmap(f1, f2, iref, w):
     for i2 in range(n2):
         i = iref[0, i2]
         if i > 0:
-            f2[i2] = 0.
             # Function values at grid 2 are expressed as weighted average
             # of function values in Np surrounding points of grid 1
             #
+            f2[i2] = 0.
             for ip in range(Np):
                 i1 = iref[ip, i2]
-                f2[i2] = f2[i2] + w[ip, i2] * f1[i1]
-                # print i2,ip,i1,w[ip,i2],f1[i1],f2[i2]
-    # print f2
+                f2[i2] += w[ip, i2] * f1[i1]
+
     return f2
+
 
 
 def ipon(x, y, xp, yp):
@@ -437,10 +412,10 @@ yori = 2000.
 #xori = 50.
 #yori = 200.
 
+z2 = np.zeros((m2,n2))
 alfa = 30. * np.pi / 180.
 cosa = np.cos(alfa)
 sina = np.sin(alfa)
-z2 = np.zeros((m2, n2))
 
 m2t = np.array(range(m2)).reshape(m2,1)
 n2t = np.array(range(n2)).reshape(1,n2)
