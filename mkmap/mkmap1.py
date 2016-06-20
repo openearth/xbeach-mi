@@ -6,13 +6,15 @@ Created on Wed Apr 20 18:13:20 2016
 
 wvermin: trying to optimize this. In statu nascendi
 
-2016-06-19: still in statu nascendi, and probably not bug free.
 I found that the speedup attained (less then a factor 2) is not worthwhile
-so I abandoned this.
+so I abandoned this after 
+
+ - cleaning up some code
+ - optimize partially mkmap()
+ - added function point_in_poly(), which seems somewhat faster then ipon
 
 Suggest to pythonise the fortran version using f2py
 
-But, I found something... wait
 """
 import sys
 #from numpy import *
@@ -23,6 +25,42 @@ import bisect
 import matplotlib.pyplot as plt
 from inspect import currentframe
 from itertools import izip
+
+def point_in_poly(x,y,poly):
+# http://geospatialpython.com/2011/08/point-in-polygon-2-on-line.html
+   # check if point is a vertex
+   if (x,y) in poly: return "IN"
+
+   # check if point is on a boundary
+   for i in range(len(poly)):
+      p1 = None
+      p2 = None
+      if i==0:
+         p1 = poly[0]
+         p2 = poly[1]
+      else:
+         p1 = poly[i-1]
+         p2 = poly[i]
+      if p1[1] == p2[1] and p1[1] == y and x > min(p1[0], p2[0]) and x < max(p1[0], p2[0]):
+         return "BOUND"
+      
+   n = len(poly)
+   inside = False
+
+   p1x,p1y = poly[0]
+   for i in range(n+1):
+      p2x,p2y = poly[i % n]
+      if y > min(p1y,p2y):
+         if y <= max(p1y,p2y):
+            if x <= max(p1x,p2x):
+               if p1y != p2y:
+                  xints = (y-p1y)*(p2x-p1x)/(p2y-p1y)+p1x
+               if p1x == p2x or x <= xints:
+                  inside = not inside
+      p1x,p1y = p2x,p2y
+
+   if inside: return "IN"
+   else: return "OUT"
 
 def getln():  # get line number
     cf = currentframe()
@@ -41,10 +79,10 @@ def tic():
     startTime_for_tictoc = time.time()
 
 
-def toc():
+def toc(text=''):
     import time
     if 'startTime_for_tictoc' in globals():
-        print "Elapsed time is " + str(time.time() - startTime_for_tictoc) + " seconds."
+        print "Elapsed time for "+text+" is " + str(time.time() - startTime_for_tictoc) + " seconds."
     else:
         print "Toc: start time not set"
 
@@ -208,6 +246,7 @@ def mkmap(x1, y1, mask, x2, y2):
     nrin = [np.intersect1d(x,y) for x,y in izip(selx,sely)]
 
     print getln(),'entering loop'
+    # the folowing loop is also time consuming
 
     for j1 in range(n1 - 1):
         for i1 in range(m1 - 1):
@@ -297,6 +336,18 @@ def ipon(x, y, xp, yp):
 #                       - THE EDGE IS TREATED SEPARATELY                 *
 #
 #     Close polygon and subtract coordinates of xp,yp
+
+    # use function found on the web, it seems somewhat faster and
+    # uses the same algorithm:
+
+    r = point_in_poly(xp,yp,zip(x,y))
+    if r == 'IN':
+        return 1
+    elif r == 'OUT':
+        return -1 
+    else:
+        return 0
+
     n = np.size(x) - 1
 #      x=concatenate((x,[x[0]]),0)
 #      y=concatenate((y,[y[0]]),0)
@@ -353,8 +404,8 @@ for i in range(np.size(xp)):
         w[:, i] = ww
         for j in range(4):
             zp[i] = zp[i] + w[j, i] * z[j]
-toc()
-print getln(), '*****'
+print getln(), 'time for testing ipon and bilin5:'
+toc('testing ipon and bilin5')
 tic()
 if Plot:
     print 'plotting result of ipon and bilin5'
@@ -364,8 +415,7 @@ if Plot:
     plt.set_cmap('jet')
     plt.plot(x, y, 'k')
     plt.savefig('plot11.png')
-toc()
-print getln(), '*****'
+toc("plotting result of ipon and bilin5")
 # Test mkmap and grmap functions
 tic()
 print 'testing mkmap and grmap; preparation'
@@ -427,18 +477,15 @@ y2 = yori + np.dot(m2t,dx2t*sina)+np.dot(dy2t*cosa,n2t)
 
 
 print 'grid 1 ', m1 * n1, ' points, grid 2 ', m2 * n2, ' points'
-toc()
-print getln(), '*****'
+toc("preparation")
 tic()
 print 'testing mkmap'
 w, iref = mkmap(x1, y1, mask, x2, y2)
-toc()
-print getln(), '*****'
+toc("testing mkmap")
 tic()
 print 'testing grmap'
 z2 = grmap(z1, z2, iref, w)
-toc()
-print getln(), '*****'
+toc("testing grmap")
 tic()
 if Plot:
     print 'plotting results'
@@ -449,15 +496,13 @@ if Plot:
     plt.axis('equal')
     plt.savefig('plot12.png')
 # plt.pcolor(x2,y2,z2)
-toc()
-print getln(), '*****'
+toc("plot")
 tic()
 print 'shift hump in grid 1 and interpolate again'
 y0 = 3500.
 z1 = amp * np.exp(-((x1 - x0) ** 2 + (y1 - y0) ** 2) / L ** 2)
 z2 = grmap(z1, z2, iref, w)
-toc()
-print getln(), '*****'
+toc("shift hump")
 tic()
 if Plot:
     print 'plot results'
@@ -467,5 +512,4 @@ if Plot:
                 5, z2, linewidths=0.01, vmin=0., vmax=amp)
     plt.axis('equal')
     plt.savefig('plot13.png')
-toc()
-print getln(), '*****'
+toc("plot")
