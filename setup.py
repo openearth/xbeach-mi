@@ -11,6 +11,7 @@ setup(
     install_requires=[
         'numpy',
         'docopt',
+        'mako',
         'multiprocessing',
     ],
     #setup_requires=[
