@@ -4,7 +4,7 @@ Source code documentation
 model
 -----
 
-.. automodule:: xbeachmi.model
+.. automodule:: model
    :members:
    :private-members:
    :special-members:
@@ -12,7 +12,7 @@ model
 cmd
 ---
 
-.. automodule:: xbeachmi.cmd
+.. automodule:: console
    :members:
    :private-members:
    :special-members:

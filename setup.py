@@ -11,19 +11,18 @@ setup(
     install_requires=[
         'numpy',
         'docopt',
-        'bmi',
         'multiprocessing',
     ],
-    setup_requires=[
-        'sphinx',
-        'sphinx_rtd_theme'
-    ],
+    #setup_requires=[
+    #    'sphinx',
+    #    'sphinx_rtd_theme'
+    #],
     tests_require=[
         'nose'
     ],
     test_suite='nose.collector',
     entry_points={'console_scripts': [
-        '{0} = xbeachmi.cmd:cmd'.format(
+        '{0} = xbeachmi.console:xbeachmi'.format(
             'xbeach-mi'),
     ]},
 )

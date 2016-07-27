@@ -1,4 +1,10 @@
-'''xbeach-mi : XBeach wrapper for running multiple parallel instances
+import docopt
+import logging
+from model import XBeachMIWrapper
+
+
+def xbeachmi():
+    '''xbeach-mi : XBeach wrapper for running multiple parallel instances
 
 Usage:
     xbeach-mi <config> [--verbose=LEVEL]
@@ -10,16 +16,9 @@ Options:
     -h, --help         show this help message and exit
     --verbose=LEVEL    print logging messages [default: 30]
 
-'''
-
-
-import logging
-from model import XBeachMIWrapper
-
-
-def cmd():
-    import docopt
-    arguments = docopt.docopt(__doc__)
+    '''
+    
+    arguments = docopt.docopt(xbeachmi.__doc__)
 
     # initialize logger
     if arguments['--verbose'] is not None:
@@ -33,5 +32,5 @@ def cmd():
 
             
 if __name__ == '__main__':
-    cmd()
+    xbeachmi()
     

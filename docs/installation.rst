@@ -94,5 +94,5 @@ step 2.
 
 .. figure:: images/image13.png
 
-#. Details on configuring and running XBeach MI can be found on the documentation website: examples_
+#. Details on configuring and running XBeach MI can be found on the documentation website: :ref:`examples`
 

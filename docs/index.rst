@@ -26,6 +26,7 @@ Contents:
    installation
    example
    sourcecode
+   mpi
 
 Command-line tools
 ------------------
@@ -36,7 +37,7 @@ The XBeach MI wrapper can be executed from the command-line using the
 xbeach-mi
 ^^^^^^^^^
 
-.. automodule:: xbeachmi.cmd
+.. automodule:: console
                 :members:
 
 
