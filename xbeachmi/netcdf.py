@@ -1,5 +1,12 @@
-import netCDF4
 from datetime import datetime
+
+
+# check if netCDF4 is available
+try:
+    import netCDF4
+    HAVE_NETCDF = True
+except ImportError:
+    HAVE_NETCDF = False
 
 
 def initialize(ncfile, dimensions, variables=None, attributes=None, crs=None):
@@ -43,6 +50,10 @@ def initialize(ncfile, dimensions, variables=None, attributes=None, crs=None):
         dict with EPSG attributes for local coordinate reference system (crs)
 
     '''
+
+    # abort if netCDF4 is not available
+    if not HAVE_NETCDF:
+        return
 
     with netCDF4.Dataset(ncfile, 'w') as nc:
 
@@ -251,6 +262,10 @@ def append(ncfile, idx, variables):
         appended (values)
 
     '''
+
+    # abort if netCDF4 is not available
+    if not HAVE_NETCDF:
+        return
 
     with netCDF4.Dataset(ncfile, 'a') as nc:
         nc.variables['time'][idx] = variables['time']
