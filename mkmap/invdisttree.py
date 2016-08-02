@@ -10,18 +10,21 @@ from timeit import default_timer as timer
 # works with scipy and pykdtree:
 #
 
-#from scipy.spatial import cKDTree as KDTree
-from pykdtree.kdtree import KDTree
+from scipy.spatial import cKDTree as KDTree
+
+# pykdtree from https://github.com/storpipfugl/pykdtree is much faster:
+#from pykdtree.kdtree import KDTree
 
 
-    # http://docs.scipy.org/doc/scipy/reference/spatial.html
+# documentation of kdtree usage:
+# http://docs.scipy.org/doc/scipy/reference/spatial.html
 
 from inspect import currentframe
 def getln():  # get line number
     cf = currentframe()
     return 'line '+str(cf.f_back.f_lineno)+':'
 
-__date__ = "2010-11-09 Nov"  # weights, doc
+__date__ = "2010-11-09 Nov"  
 
 #.........................................................................
 
@@ -98,6 +101,7 @@ is exceedingly sensitive to distance and to h.
 
         self.distances, self.ix = self.tree.query(q, k=nnear, eps=eps)
 
+# new, optimized method:
         if method == 'new':
             if nnear == 1:
                 interpol=self.z[self.ix]
@@ -113,6 +117,7 @@ is exceedingly sensitive to distance and to h.
                 self.wsum = sum(w1)
             return wz1 if qdim > 1 else wz1[0]
 
+# original method:
         interpol = np.zeros((len(self.distances),) + np.shape(self.z[0]))
         jinterpol = 0
         for dist, ix in zip(self.distances, self.ix):
