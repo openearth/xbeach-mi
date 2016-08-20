@@ -23,7 +23,7 @@ class interpolkd:
 
     def setz(self,z):
         assert self.length == len(z), "len(X) %d != len(z) %d" % (self.length, len(z))
-        self.z = z
+        self.z = z.copy()
 
     def setfill_value(self,fill_value):
         self.fill_value = fill_value
@@ -66,7 +66,7 @@ class interpoldln:
 
     def setz(self,z):
         assert self.length == len(z), "len(X) %d != len(z) %d" % (self.length, len(z))
-        self.z = z
+        self.z = z.copy()
         self.F = self.LinearNDInterpolator(self.tri, self.z, fill_value=self.fill_value)
 
     def setfill_value(self,fill_value):
