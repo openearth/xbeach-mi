@@ -1,0 +1,3 @@
+#!/bin/bash
+gfortran -shared -fPIC -o test.so test.f90
+python test.py

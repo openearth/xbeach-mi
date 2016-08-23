@@ -1,0 +1,7 @@
+#!/bin/bash
+./clean || exit
+gfortran -c -fPIC -Wall -g sub1.f90 ||exit
+f2py sub1.f90 -m sub1 --overwrite-signature -h sub1.pyf ||exit
+f2py --fcompiler=gnu95 -c -m sub1 sub1.o sub1.pyf||exit
+python b.py || exit
+echo all done

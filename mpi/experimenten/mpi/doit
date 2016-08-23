@@ -1,0 +1,4 @@
+#!/bin/bash
+./clean
+mpicc -o hello hello.c
+mpiexec -np 2 ./hello aap : -np 3 ./hello noot

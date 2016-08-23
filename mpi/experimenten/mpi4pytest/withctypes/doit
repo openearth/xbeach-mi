@@ -1,0 +1,15 @@
+#!/bin/bash
+pythonprog=bmitest.py
+# remove litter:
+./clean || exit
+srcs="constants.f90 data.f90 timestep.f90 iso_c_utils.f90 sub.f90"
+objs=`echo $srcs|sed 's/\.f90/.o/g'`
+# conpile:
+for src in $srcs ; do
+   mpif90 -O0 -c -shared -fPIC -Wall -g  $src ||exit
+done
+# create shared object:
+mpif90 -shared -fPIC -o libsub.so $objs || exit
+# run:
+mpiexec -n 5 python $pythonprog || exit
+echo all done
