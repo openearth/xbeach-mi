@@ -12,7 +12,6 @@ setup(
         'numpy',
         'docopt',
         'mako',
-        'multiprocessing',
     ],
     #setup_requires=[
     #    'sphinx',

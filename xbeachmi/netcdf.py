@@ -199,7 +199,7 @@ def initialize(ncfile, dimensions, variables=None, attributes=None, crs=None):
         nc.variables['time_bounds'].comment = 'time bounds for each time value'
 
         if variables is not None:
-            for var, props in variables.iteritems():
+            for var, props in variables.items():
 
                 nc.createVariable(var, 'float32', props['dimensions'])
                 nc.variables[var].long_name = var
@@ -220,12 +220,12 @@ def initialize(ncfile, dimensions, variables=None, attributes=None, crs=None):
         # set local coordinate system
         nc.createVariable('crs', 'int32', ())
         if crs is not None:
-            for key, value in crs.iteritems():
+            for key, value in crs.items():
                 nc.variables['crs'] = set_ncattr(nc.variables['crs'], key, value)
 
         # set netcdf attributes
         if attributes is not None:
-            for key, value in attributes.iteritems():
+            for key, value in attributes.items():
                 nc = set_ncattr(nc, key, value)
             
         # store static data
@@ -241,7 +241,7 @@ def initialize(ncfile, dimensions, variables=None, attributes=None, crs=None):
         
 #        # store model settings
 #        grp = nc.createGroup('settings')
-#        for k, v in self.params.iteritems():
+#        for k, v in self.params.items():
 #            if isinstance(v, bool):
 #                grp.setncattr(k, int(v))
 #            else:
@@ -269,7 +269,7 @@ def append(ncfile, idx, variables):
 
     with netCDF4.Dataset(ncfile, 'a') as nc:
         nc.variables['time'][idx] = variables['time']
-        for name, value in variables.iteritems():
+        for name, value in variables.items():
             nc.variables[name][idx,...] = value
         nc.variables['time_bounds'][idx,0] \
             = 0 if idx == 0 else nc.variables['time'][idx]

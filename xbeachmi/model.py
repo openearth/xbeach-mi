@@ -1,3 +1,5 @@
+from __future__  import absolute_import
+
 import os
 import re
 import json
@@ -9,9 +11,11 @@ from mako.template import Template
 from bmi.wrapper import BMIWrapper
 from bmi.api import IBmi
 from multiprocessing import Process, Queue, JoinableQueue
-from Queue import Empty, Full
+from queue import Empty, Full
 
-import progress, netcdf, parsers
+import xbeachmi.progress
+import xbeachmi.netcdf
+import xbeachmi.parsers
 
 
 # initialize log
@@ -47,7 +51,7 @@ class XBeachMIWrapper:
         with XBeachMI(configfile=self.configfile) as self.engine:
 
             self.t = 0
-            self.progress = progress.ProgressIndicator(
+            self.progress = xbeachmi.progress.ProgressIndicator(
                 duration=self.engine.get_end_time()
             )
 
@@ -68,7 +72,7 @@ class XBeachMIWrapper:
 
         '''
 
-        if self.engine.config.has_key('netcdf'):
+        if 'netcdf' in self.engine.config.keys():
 
             logger.debug('Initializing output...')
         
@@ -80,8 +84,8 @@ class XBeachMIWrapper:
                 for v in cfg['outputvars']
             }
         
-            netcdf.initialize(cfg['outputfile'],
-                              self.read_dimensions(),
+            xbeachmi.netcdf.initialize(cfg['outputfile'],
+                                       self.read_dimensions(),
                               variables=variables,
                               attributes=cfg['attributes'],
                               crs=cfg['crs'])
@@ -92,7 +96,7 @@ class XBeachMIWrapper:
     def output(self):
         '''Write model data to netCDF4 output file'''
 
-        if self.engine.config.has_key('netcdf'):
+        if 'netcdf' in self.engine.config.keys():
             
             cfg = self.engine.config['netcdf']
 
@@ -105,9 +109,9 @@ class XBeachMIWrapper:
                 variables['time'] = self.t
                 variables['instance'] = ', '.join(self.engine.running)
         
-                netcdf.append(cfg['outputfile'],
-                              idx=self.iout,
-                              variables=variables)
+                xbeachmi.netcdf.append(cfg['outputfile'],
+                                       idx=self.iout,
+                                       variables=variables)
 
                 self.iout += 1
 
@@ -129,7 +133,7 @@ class XBeachMIWrapper:
 
         dimensions = {}
 
-        cfg_xbeach = parsers.XBeachParser(
+        cfg_xbeach = xbeachmi.parsers.XBeachParser(
             self.engine.instances[self.engine.running[0]]['configfile']).parse()
 
         # x and y
@@ -145,7 +149,7 @@ class XBeachMIWrapper:
             dimensions['y'] = []
 
         # ensure lists
-        for k, v in dimensions.iteritems():
+        for k, v in dimensions.items():
             try:
                 len(v)
             except:
@@ -266,11 +270,11 @@ class XBeachMI(IBmi):
             raise IOError('Configuration file not found [%s]' % self.configfile)
 
         # set engine
-        if self.config.has_key('engine'):
+        if 'engine' in self.config.keys():
             self.engine = self.config['engine']
 
         # read params.txt file
-        if self.config.has_key('params_file'):
+        if 'params_file' in self.config.keys():
             if os.path.exists(self.config['params_file']):
                 fpath, fname = os.path.split(self.config['params_file'])
                 if not os.path.isabs(fpath):
@@ -278,9 +282,9 @@ class XBeachMI(IBmi):
 
                 # get instances
                 instances = []
-                if self.config.has_key('instances'):
+                if 'instances' in self.config.keys():
                     instances.extend(self.config['instances'])
-                if self.config.has_key('scenario'):
+                if 'scenario' in self.config.keys():
                     for t, i in self.config['scenario']:
                         if type(i) is list:
                             instances.extend(i)
@@ -337,7 +341,7 @@ class XBeachMI(IBmi):
                     self.instances[instance]['configfile'] = os.path.abspath(parfile)
 
                 # render templates
-                for instance in self.instances.itervalues():
+                for instance in self.instances.values():
 
                     # set global mako template markers
                     markers = instance['markers']
@@ -355,8 +359,8 @@ class XBeachMI(IBmi):
     def update_instances(self):
         '''Change and/or update running instances'''
 
-        if self.config.has_key('aggregate'):
-            if self.config['aggregate'].has_key('interval'):
+        if 'aggregate' in self.config.keys():
+            if 'interval' in self.config['aggregate'].keys():
                 t = self._call('get_current_time')
                 if t >= self.next_aggegation:
                     logger.debug('Aggregate instances...')
@@ -364,7 +368,7 @@ class XBeachMI(IBmi):
                     self.next_aggegation = t + self.config['aggregate']['interval']
                     return
 
-        if self.config.has_key('scenario'):
+        if 'scenario' in self.config.keys():
             if self.next_index < len(self.config['scenario']):
                 t = self.get_current_time()
                 tc, instances = self.config['scenario'][self.next_index]
@@ -410,19 +414,13 @@ class XBeachMI(IBmi):
         logger.debug('Synchronizing time...')
         
         try:
-            t1 = self._call('get_current_time')
+            t = self._call('get_current_time')
         except:
             logger.error('Failed to get time from "%s"!' % ', '.join(self.running))
             logger.error(traceback.format_exc())
 
         try:
-            t2 = self._call('get_current_time', instances=[instance])
-        except:
-            logger.error('Failed to get time from "%s"!' % instance)
-            logger.error(traceback.format_exc())
-
-        try:
-            self._call('update', (t2 - t1,), instances=[instance])
+            self._call('set_current_time', (t,), instances=[instance])
         except:
             logger.error('Failed to set time in "%s"!' % instance)
             logger.error(traceback.format_exc())
@@ -465,7 +463,7 @@ class XBeachMI(IBmi):
                 logger.error(traceback.format_exc())
             
             
-    def aggregate(self, x, method='mean', options={}):
+    def aggregate(self, x, method='average', options={}):
         '''Aggregate values
 
         Parameters
@@ -488,11 +486,11 @@ class XBeachMI(IBmi):
         if len(x) > 0:
 
             # read config
-            if self.config.has_key('aggregate'):
+            if 'aggregate' in self.config.keys():
                 agg = self.config['aggregate']
-                if agg.has_key('method'):
+                if 'method' in agg.keys():
                     method = agg['method']
-                if agg.has_key('options'):
+                if 'options' in agg.keys():
                     options = agg['options']
 
             # apply aggregation
@@ -505,7 +503,7 @@ class XBeachMI(IBmi):
     def start(self):
         '''Start all instance processes'''
         
-        for name, instance in self.instances.iteritems():
+        for name, instance in self.instances.items():
             logger.debug('Starting instance "%s"...' % name)
             self.instances[name]['process'].start()
             
@@ -513,7 +511,7 @@ class XBeachMI(IBmi):
     def join(self):
         '''Wait for all instance processes to be finished'''
         
-        for name, instance in self.instances.iteritems():
+        for name, instance in self.instances.items():
             logger.debug('Joining instance "%s"...' % name)
             self.instances[name]['process'].join()
             
@@ -555,6 +553,7 @@ class XBeachMI(IBmi):
                     logger.error('Call "%s" with "(%s)" FAILED [%d]' %
                                  (fcn, ','.join([str(x) for x in args]), os.getpid()))
                     queue_from.put(None)
+                    raise
 
                 # register task as completed
                 queue_to.task_done()
@@ -642,7 +641,7 @@ class XBeachMI(IBmi):
     def initialize(self):
         '''Initialize and start instance processes'''
         
-        for name, instance in self.instances.iteritems():
+        for name, instance in self.instances.items():
             logger.debug('Starting process "%s"...' % name)
             self.instances[name]['process'] = \
                 Process(target=self.run,
@@ -698,7 +697,7 @@ class XBeachMI(IBmi):
     def finalize(self):
         '''Finalize instance processes'''
         
-        for instance in self.instances.iterkeys():
+        for instance in self.instances.keys():
             logger.debug('Finalizing "%s"...' % instance)
             self._call('finalize', instances=[instance])
         self.join()

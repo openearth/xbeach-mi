@@ -1,6 +1,9 @@
+from __future__  import absolute_import
+
 import docopt
 import logging
-from model import XBeachMIWrapper
+
+from xbeachmi.model import XBeachMIWrapper
 
 
 def xbeachmi():
