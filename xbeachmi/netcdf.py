@@ -1,3 +1,4 @@
+import numpy as np
 from datetime import datetime
 
 
@@ -122,8 +123,8 @@ def initialize(ncfile, dimensions, variables=None, attributes=None, crs=None):
         nc.variables['x'].standard_name = 'projection_x_coordinate'
         nc.variables['x'].units = 'm'
         nc.variables['x'].axis = 'X'
-        nc.variables['x'].valid_min = 0
-        nc.variables['x'].valid_max = 0
+        nc.variables['x'].valid_min = -np.inf
+        nc.variables['x'].valid_max = np.inf
         nc.variables['x'].bounds = 'x_bounds'
         nc.variables['x'].grid_mapping = 'crs'
         nc.variables['x'].comment = ''
@@ -133,8 +134,8 @@ def initialize(ncfile, dimensions, variables=None, attributes=None, crs=None):
         nc.variables['y'].standard_name = 'projection_y_coordinate'
         nc.variables['y'].units = 'm'
         nc.variables['y'].axis = 'Y'
-        nc.variables['y'].valid_min = 0
-        nc.variables['y'].valid_max = 0
+        nc.variables['y'].valid_min = -np.inf
+        nc.variables['y'].valid_max = np.inf
         nc.variables['y'].bounds = 'y_bounds'
         nc.variables['y'].grid_mapping = 'crs'
         nc.variables['y'].comment = ''
@@ -143,8 +144,8 @@ def initialize(ncfile, dimensions, variables=None, attributes=None, crs=None):
         nc.variables['lat'].long_name = 'latitude'
         nc.variables['lat'].standard_name = 'latitude'
         nc.variables['lat'].units = 'degrees_north'
-        nc.variables['lat'].valid_min = 0
-        nc.variables['lat'].valid_max = 0
+        nc.variables['lat'].valid_min = -np.inf
+        nc.variables['lat'].valid_max = np.inf
         nc.variables['lat'].bounds = 'lat_bounds'
         nc.variables['lat'].ancillary_variables = ''
         nc.variables['lat'].comment = ''
@@ -153,8 +154,8 @@ def initialize(ncfile, dimensions, variables=None, attributes=None, crs=None):
         nc.variables['lon'].long_name = 'longitude'
         nc.variables['lon'].standard_name = 'longitude'
         nc.variables['lon'].units = 'degrees_east'
-        nc.variables['lon'].valid_min = 0
-        nc.variables['lon'].valid_max = 0
+        nc.variables['lon'].valid_min = -np.inf
+        nc.variables['lon'].valid_max = np.inf
         nc.variables['lon'].bounds = 'lon_bounds'
         nc.variables['lon'].ancillary_variables = ''
         nc.variables['lon'].comment = ''
@@ -173,8 +174,8 @@ def initialize(ncfile, dimensions, variables=None, attributes=None, crs=None):
         nc.variables['instance'].long_name = 'instance'
         nc.variables['instance'].standard_name = ''
         nc.variables['instance'].units = ''
-        nc.variables['instance'].valid_min = 0
-        nc.variables['instance'].valid_max = 0
+        nc.variables['instance'].valid_min = -np.inf
+        nc.variables['instance'].valid_max = np.inf
         nc.variables['instance'].ancillary_variables = ''
         nc.variables['instance'].comment = ''
 
@@ -207,8 +208,8 @@ def initialize(ncfile, dimensions, variables=None, attributes=None, crs=None):
                 nc.variables[var].units = ''
                 nc.variables[var].scale_factor = 1.0
                 nc.variables[var].add_offset = 0.0
-                nc.variables[var].valid_min = 0
-                nc.variables[var].valid_max = 0
+                nc.variables[var].valid_min = -np.inf
+                nc.variables[var].valid_max = np.inf
                 nc.variables[var].coordinates = ' '.join(props['dimensions'])
                 nc.variables[var].grid_mapping = 'crs'
                 nc.variables[var].source = ''
