@@ -22,7 +22,8 @@ setup(
     ],
     test_suite='nose.collector',
     entry_points={'console_scripts': [
-        '{0} = xbeachmi.console:xbeachmi'.format(
-            'xbeach-mi'),
+        '{0} = xbeachmi.console:xbeachmi'.format('xbeach-mi'),
+        '{0} = xbeachmi.console:xbeachmi_prepare'.format('xbeach-mi-prepare'),
+        '{0} = xbeachmi.console:xbeachmi_spawn'.format('xbeach-mi-spawn'),
     ]},
 )

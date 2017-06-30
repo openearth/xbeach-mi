@@ -4,11 +4,13 @@ import os
 import re
 import json
 import shutil
+import docopt
 import logging
 import traceback
 import numpy as np
 from mako.template import Template
-from bmi.wrapper import BMIWrapper
+from mmi.mmi_client import MMIClient
+import mmi.runner
 from bmi.api import IBmi
 from multiprocessing import Process, Queue, JoinableQueue
 from queue import Empty, Full
@@ -45,10 +47,33 @@ class XBeachMIWrapper:
         self.configfile = configfile
 
 
-    def run(self):
+    def prepare(self, overwrite=True):
+        '''Prepare model run directories'''
+
+        self.engine = XBeachMI(configfile=self.configfile, overwrite=overwrite)
+        
+        for name, instance in self.engine.instances.items():
+            logger.info('Prepared run directory for instance "%s".' % name)
+
+
+    def spawn(self, base_port=53606):
+              
+        self.engine = XBeachMI(configfile=self.configfile, overwrite=False)
+
+        for i, (name, instance) in enumerate(self.engine.instances.items()):
+            argv = ['xbeach',
+                    instance['markers']['parfile'],
+                    '--port', base_port + i*3,
+                    '--pause']
+            arguments = docopt.docopt(mmi.runner.__doc__, argv=argv)
+            Process(target=mmi.runner.runner, args=(arguments,)).start()
+            logger.info('Spawned process for instance "%s".' % name)
+
+        
+    def run(self, overwrite=True):
         '''Start model time loop'''
 
-        with XBeachMI(configfile=self.configfile) as self.engine:
+        with XBeachMI(configfile=self.configfile, overwrite=overwrite) as self.engine:
 
             self.t = 0
             self.progress = xbeachmi.progress.ProgressIndicator(
@@ -194,7 +219,7 @@ class XBeachMI(IBmi):
     dzmax = 0.05            # maximum bed level change per time step
     
 
-    def __init__(self, configfile=''):
+    def __init__(self, configfile='', overwrite=True):
         '''Initialize class
 
         Parameters
@@ -202,14 +227,16 @@ class XBeachMI(IBmi):
         configfile : str
             path to JSON configuration file, see
             :func:`~xbeach-mi.model.XBeachMI.load_configfile`
+        overwrite : bool
+            allow overwriting of run directories
 
         '''
         
         self.configfile = configfile
-        self.load_configfile()
+        self.load_configfile(overwrite=overwrite)
 
 
-    def load_configfile(self):
+    def load_configfile(self, overwrite=True):
         '''Load JSON configuration file
 
         Loads JSON configuration file and create separate hidden model
@@ -247,6 +274,11 @@ class XBeachMI(IBmi):
         file and the absolute path to the params.txt template file
         used.
 
+        Parameters
+        ----------
+        overwrite : bool
+          allow overwriting of run directories
+
         '''
 
         if os.path.exists(self.configfile):
@@ -281,34 +313,28 @@ class XBeachMI(IBmi):
                     fpath = os.path.join(os.getcwd(), fpath)
 
                 # get instances
-                instances = []
+                instances = {}
                 if 'instances' in self.config.keys():
-                    instances.extend(self.config['instances'])
-                if 'scenario' in self.config.keys():
-                    for t, i in self.config['scenario']:
-                        if type(i) is list:
-                            instances.extend(i)
-                        else:
-                            instances.append(i)
-                instances = np.unique(instances)
+                    instances.update(self.config['instances'])
 
                 # check if instances are defined
                 if len(instances) == 0:
                     raise ValueError('No instances defined')
                 
                 # set initial running instances
-                self.running = list(instances)
+                self.running = list(instances.keys())
 
                 # create a hidden model directory for each model
                 # instance listed in the configuration file and copy
                 # params.txt file and other model configuration files
                 # to the model directory
-                for instance in instances:
+                for instance, host in instances.items():
 
                     logger.debug('Creating working directory "%s"...' % instance)
 
                     # create instance variables
-                    self.instances[instance] = {'process': None,
+                    self.instances[instance] = {'host': host,
+                                                'process': None,
                                                 'queue_to': JoinableQueue(),
                                                 'queue_from': Queue(),
                                                 'configfile': '',
@@ -316,19 +342,10 @@ class XBeachMI(IBmi):
 
                     # create hidden model directory
                     subdir = '.%s' % instance
-                    if os.path.exists(subdir):
-                        shutil.rmtree(subdir)
-                    shutil.copytree(fpath, subdir,
-                                    ignore=lambda src, files: [f
-                                                               for f in files
-                                                               if f.startswith('.') or 
-                                                               f.endswith('.nc') or
-                                                               f.endswith('.log')])
 
                     # create backup of original params.txt file
                     parfile = os.path.join(subdir, fname)
                     tmplfile = os.path.join(subdir, '%s.tmpl' % fname)
-                    shutil.copyfile(parfile, tmplfile)
 
                     # store instance-specific mako template markers
                     self.instances[instance]['markers'] = {
@@ -340,20 +357,31 @@ class XBeachMI(IBmi):
 
                     self.instances[instance]['configfile'] = os.path.abspath(parfile)
 
-                # render templates
-                for instance in self.instances.values():
+                    # render templates
+                    if os.path.exists(subdir) and overwrite:
+                        shutil.rmtree(subdir)
+                    if not os.path.exists(subdir):
+                        shutil.copytree(fpath, subdir,
+                                        ignore=lambda src, files: [f
+                                                                   for f in files
+                                                                   if f.startswith('.') or 
+                                                                   f.endswith('.nc') or
+                                                                   f.endswith('.log')])
 
-                    # set global mako template markers
-                    markers = instance['markers']
-                    markers['instances'] = self.instances.keys()
+                        shutil.copyfile(parfile, tmplfile)
+                        for instance in self.instances.values():
 
-                    logger.debug('Rendering template "%s"...' % markers['tmplfile'])
-                    
-                    template = Template(filename=markers['tmplfile'])
-                    with open(markers['parfile'], 'w') as fp:
-                        rendered = template.render(**markers)
-                        fp.write('defuse = 0\n') # disable time explosion checks
-                        fp.write(rendered)
+                            # set global mako template markers
+                            markers = instance['markers']
+                            markers['instances'] = self.instances.keys()
+                        
+                            logger.debug('Rendering template "%s"...' % markers['tmplfile'])
+                        
+                            template = Template(filename=markers['tmplfile'])
+                            with open(markers['parfile'], 'w') as fp:
+                                rendered = template.render(**markers)
+                                fp.write('defuse = 0\n') # disable time explosion checks
+                                fp.write(rendered)
 
 
     def update_instances(self):
@@ -643,12 +671,8 @@ class XBeachMI(IBmi):
         
         for name, instance in self.instances.items():
             logger.debug('Starting process "%s"...' % name)
-            self.instances[name]['process'] = \
-                Process(target=self.run,
-                        args=(instance['configfile'],
-                              self.instances[name]['queue_to'],
-                              self.instances[name]['queue_from']))
-        self.start()
+            self.instances[name]['process'] = MMIClient(instance['host'])
+        #self.start()
             
             
     def update(self, dt=-1):
@@ -700,7 +724,7 @@ class XBeachMI(IBmi):
         for instance in self.instances.keys():
             logger.debug('Finalizing "%s"...' % instance)
             self._call('finalize', instances=[instance])
-        self.join()
+        #self.join()
 
         # change working directory back to original
         os.chdir(self.cwd)
@@ -740,11 +764,15 @@ class XBeachMI(IBmi):
         #             (fcn, ','.join([str(x) for x in args]), os.getpid()))
 
         vals = []
+        #for instance in instances:
+        #    self.instances[instance]['queue_to'].put((fcn, args))
+        #for instance in instances:
+        #    self.instances[instance]['queue_to'].join()
+        #    vals.append(self.instances[instance]['queue_from'].get())
         for instance in instances:
-            self.instances[instance]['queue_to'].put((fcn, args))
-        for instance in instances:
-            self.instances[instance]['queue_to'].join()
-            vals.append(self.instances[instance]['queue_from'].get())
+            w = self.instances[instance]['process']
+            r = getattr(w, fcn)(*args)
+            vals.append(r)
 
         if len(vals) > 1:
             return self.aggregate(vals)

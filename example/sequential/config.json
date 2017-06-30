@@ -1,6 +1,10 @@
 
 {
     "params_file": "params.txt",
+    "instances": {
+        "stat": "tcp://localhost:53606",
+        "instat": "tcp://localhost:53609"
+    },
     "exchange": ["zb","Fx","Fy","Sxy","Syy","Sxx","H","cgx","cgy","cx","cy","ctheta","ee","rr","k","c","cg","hh","zs","zs0","uu","vu","uv","vv","qx","qy","E","R","urms","D","Qb","ust","ueu","vev","u","v","ue","ve","wetu","wetv","wetz","hu","hv","hum","hvm","vmag","ccg","uwf","vwf","ustr","usd","DR","ur","Susg","Svsg","Subg","Svbg","ceqbg","ceqsg","ua","BR","kb","pbbed","bedfriccoef","taubx","tauby","Df","Dp","Sutot","Svtot","cctot","cf","cfu","cfv","viscu","viscv"],
     "scenario": [
         [0.0, ["stat"]],
