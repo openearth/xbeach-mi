@@ -29,7 +29,7 @@ instat    = jons_table
 % elif instance == 'stat':
 instat    = stat_table
 morfac    = 20
-morfacopt = 1
+morfacopt = 0
 epsi      = 1
 facAs     = 1
 facSk     = 1
