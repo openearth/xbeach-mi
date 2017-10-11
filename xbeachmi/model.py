@@ -81,6 +81,7 @@ class XBeachMIWrapper:
             )
 
             self.output_init()
+
             while self.t < self.progress.duration:
                 self.progress.progress(self.t)
                 self.engine.update()
@@ -671,7 +672,7 @@ class XBeachMI(IBmi):
         
         for name, instance in self.instances.items():
             logger.debug('Starting process "%s"...' % name)
-            self.instances[name]['process'] = MMIClient(instance['host'])
+            self.instances[name]['process'] = MMIClient(instance['host'], poll_timeout=50000)
         #self.start()
             
             
@@ -769,6 +770,7 @@ class XBeachMI(IBmi):
         #for instance in instances:
         #    self.instances[instance]['queue_to'].join()
         #    vals.append(self.instances[instance]['queue_from'].get())
+
         for instance in instances:
             w = self.instances[instance]['process']
             r = getattr(w, fcn)(*args)
