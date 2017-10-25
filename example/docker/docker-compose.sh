@@ -41,6 +41,8 @@ do
     echo "      - PORT=$port" >> $NAME
     echo "    volumes:" >> $NAME
     echo "      - .${instances[$i]}/:/data" >> $NAME
+    echo "    ports:" >> $NAME
+    echo "      - \"$port:$port\"" >> $NAME
 
 done
 
