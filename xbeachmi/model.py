@@ -210,32 +210,22 @@ class XBeachMI(IBmi):
 
     '''
 
-    engine = 'xbeach'
-    running = []
-    instances = {}
-    next_index = 0
-    next_aggegation = 0.
-    data = {}
+    def __init__(self, configfile=None, overwrite=True):
+        '''Initialize class'''
+
+        self.engine = 'xbeach'
+        self.running = []
+        self.instances = {}
+        self.next_index = 0
+        self.next_aggegation = 0.
+        self.data = {}
     
-    dzmax = 0.05            # maximum bed level change per time step
+        self.dzmax = 0.05            # maximum bed level change per time step
+
+        if configfile is not None:
+            self.configfile = configfile
+            self.load_configfile(overwrite=overwrite)
     
-
-    def __init__(self, configfile='', overwrite=True):
-        '''Initialize class
-
-        Parameters
-        ----------
-        configfile : str
-            path to JSON configuration file, see
-            :func:`~xbeach-mi.model.XBeachMI.load_configfile`
-        overwrite : bool
-            allow overwriting of run directories
-
-        '''
-        
-        self.configfile = configfile
-        self.load_configfile(overwrite=overwrite)
-
 
     def load_configfile(self, overwrite=True):
         '''Load JSON configuration file
@@ -613,6 +603,10 @@ class XBeachMI(IBmi):
     
     def get_end_time(self):
         return self._call('get_end_time')
+
+
+    def get_time_step(self, dt):
+        return 1.
     
     
     def get_var(self, var):
@@ -667,12 +661,27 @@ class XBeachMI(IBmi):
             'BMI extended function "get_var_slice" is not implemented yet')
 
     
-    def initialize(self):
-        '''Initialize and start instance processes'''
-        
+    def initialize(self, configfile=None, overwrite=False):
+        '''Initialize and start instance processes
+
+        Parameters
+        ----------
+        configfile : str
+            path to JSON configuration file, see
+            :func:`~xbeach-mi.model.XBeachMI.load_configfile`
+        overwrite : bool
+            allow overwriting of run directories
+
+        '''
+
+        if configfile is not None:
+            self.configfile = configfile
+            self.load_configfile(overwrite=overwrite)
+
         for name, instance in self.instances.items():
             logger.debug('Starting process "%s"...' % name)
-            self.instances[name]['process'] = MMIClient(instance['host'], poll_timeout=50000)
+            self.instances[name]['process'] = MMIClient(instance['host'],
+                                                        poll_timeout=50000)
         #self.start()
             
             
