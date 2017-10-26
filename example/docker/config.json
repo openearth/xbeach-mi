@@ -8,9 +8,9 @@
     "exchange": ["zb","Fx","Fy","Sxy","Syy","Sxx","H","cgx","cgy","cx","cy","ctheta","ee","rr","k","c","cg","hh","zs","zs0","uu","vu","uv","vv","qx","qy","E","R","urms","D","Qb","ust","ueu","vev","u","v","ue","ve","wetu","wetv","wetz","hu","hv","hum","hvm","vmag","ccg","uwf","vwf","ustr","usd","DR","ur","Susg","Svsg","Subg","Svbg","ceqbg","ceqsg","ua","BR","kb","pbbed","bedfriccoef","taubx","tauby","Df","Dp","Sutot","Svtot","cctot","cf","cfu","cfv","viscu","viscv"],
     "scenario": [
         [0.0, ["stat"]],
-        [3000.0, ["instat"]],
-        [6000.0, ["stat"]],
-        [9000.0, ["instat"]],
+        [730800.0, ["instat"]],
+        [1004400.0, ["stat"]],
+        [1890000.0, ["instat"]],
         [2012400.0, ["stat"]],
         [2239200.0, ["instat"]],
         [2466000.0, ["stat"]],
