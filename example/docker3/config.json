@@ -1,0 +1,77 @@
+
+{
+    "params_file": "params.txt",
+    "instances": {
+        "stat": "tcp://stat:53606",
+        "instat": "tcp://instat:53609"
+    },
+    "exchange": ["zb","Fx","Fy","Sxy","Syy","Sxx","H","cgx","cgy","cx","cy","ctheta","ee","rr","k","c","cg","hh","zs","zs0","uu","vu","uv","vv","qx","qy","E","R","urms","D","Qb","ust","ueu","vev","u","v","ue","ve","wetu","wetv","wetz","hu","hv","hum","hvm","vmag","ccg","uwf","vwf","ustr","usd","DR","ur","Susg","Svsg","Subg","Svbg","ceqbg","ceqsg","ua","BR","kb","pbbed","bedfriccoef","taubx","tauby","Df","Dp","Sutot","Svtot","cctot","cf","cfu","cfv","viscu","viscv"],
+    "scenario": [
+        [0.0, ["stat"]],
+        [730800.0, ["instat"]],
+        [1004400.0, ["stat"]],
+        [1890000.0, ["instat"]],
+        [2012400.0, ["stat"]],
+        [2239200.0, ["instat"]],
+        [2466000.0, ["stat"]],
+        [2815200.0, ["instat"]],
+        [3265200.0, ["stat"]],
+        [3826800.0, ["instat"]],
+        [3938400.0, ["stat"]],
+        [4352400.0, ["instat"]],
+        [4410000.0, ["stat"]],
+        [5115600.0, ["instat"]],
+        [5256000.0, ["stat"]],
+        [5612400.0, ["instat"]],
+        [5821200.0, ["stat"]],
+        [6451200.0, ["instat"]],
+        [6537600.0, ["stat"]],
+        [6973200.0, ["instat"]],
+        [7358400.0, ["stat"]],
+        [7491600.0, ["instat"]],
+        [7632000.0, ["stat"]],
+        [7783200.0, ["instat"]],
+        [7887600.0, ["stat"]],
+        [8161200.0, ["instat"]],
+        [8276400.0, ["stat"]],
+        [8640000.0, ["instat"]],
+        [8744400.0, ["stat"]],
+        [10047600.0, ["instat"]],
+        [10155600.0, ["stat"]],
+        [10674000.0, ["instat"]],
+        [10767600.0, ["stat"]],
+        [10990800.0, ["instat"]],
+        [11959200.0, ["stat"]],
+        [19112400.0, ["instat"]],
+        [19292400.0, ["stat"]],
+        [24256800.0, ["instat"]],
+        [24433200.0, ["stat"]],
+        [27082800.0, ["instat"]],
+        [27183600.0, ["stat"]],
+        [31536000.0, ["instat"]]
+    ],
+    "netcdf" : {
+        "outputfile" : "xbeachmi.nc",
+        "outputvars" : ["zb", "zs", "zs0", "H"],
+        "interval" : 3600,
+        "crs" : {
+            "grid_mapping_name" : "oblique_stereographic",
+            "epsg_code" : "EPSG:28992",
+            "semi_major_axis" : 6377397.155,
+            "semi_minor_axis" : 6356078.96282,
+            "inverse_flattening" : 299.1528128,
+            "latitude_of_projection_origin" : 52.0922178,
+            "longitude_of_projection_origin" : 5.23155,
+            "scale_factor_at_projection_origin" : 0.9999079,
+            "false_easting" : 155000.0,
+            "false_northing" : 463000.0,
+            "proj4_params" : "+proj=sterea +lat_0=52.15616055555555 +lon_0=5.38763888888889 +k=0.999908 +x_0=155000 +y_0=463000 +ellps=bessel +units=m +towgs84=565.4174,50.3319,465.5542,-0.398957388243134,0.343987817378283,-1.87740163998045,4.0725 +no_defs"
+        },
+        "attributes" : {
+            "institution" : "Delft University of Technology",
+            "creator_name" : "Bas Hoonhout",
+            "creator_email" : "b.m.hoonhout@tudelft.nl"
+        }
+    }
+}
+        

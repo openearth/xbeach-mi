@@ -1,0 +1,190 @@
+[
+    {
+        "Id": "4c1eab459d59b60178bc557f7ea4de816c8f0bf9b243d61b4da23f012d3e06b0",
+        "Created": "2017-10-20T10:17:28.625223085Z",
+        "Path": "xbeach-mi",
+        "Args": [
+            "config.json"
+        ],
+        "State": {
+            "Status": "running",
+            "Running": true,
+            "Paused": false,
+            "Restarting": false,
+            "OOMKilled": false,
+            "Dead": false,
+            "Pid": 10431,
+            "ExitCode": 0,
+            "Error": "",
+            "StartedAt": "2017-10-20T10:18:11.954791286Z",
+            "FinishedAt": "0001-01-01T00:00:00Z"
+        },
+        "Image": "sha256:ace3cc6e7e26f8c66316f2451ab0ef038e6d5165944fd1143b2b287a9e664466",
+        "ResolvConfPath": "/var/lib/docker/containers/4c1eab459d59b60178bc557f7ea4de816c8f0bf9b243d61b4da23f012d3e06b0/resolv.conf",
+        "HostnamePath": "/var/lib/docker/containers/4c1eab459d59b60178bc557f7ea4de816c8f0bf9b243d61b4da23f012d3e06b0/hostname",
+        "HostsPath": "/var/lib/docker/containers/4c1eab459d59b60178bc557f7ea4de816c8f0bf9b243d61b4da23f012d3e06b0/hosts",
+        "LogPath": "/var/lib/docker/containers/4c1eab459d59b60178bc557f7ea4de816c8f0bf9b243d61b4da23f012d3e06b0/4c1eab459d59b60178bc557f7ea4de816c8f0bf9b243d61b4da23f012d3e06b0-json.log",
+        "Name": "/pedantic_lichterman",
+        "RestartCount": 0,
+        "Driver": "overlay2",
+        "Platform": "linux",
+        "MountLabel": "",
+        "ProcessLabel": "",
+        "AppArmorProfile": "",
+        "ExecIDs": null,
+        "HostConfig": {
+            "Binds": [
+                "/Users/hoonhout/Github/xbeach-mi/example/sequential:/data"
+            ],
+            "ContainerIDFile": "",
+            "LogConfig": {
+                "Type": "json-file",
+                "Config": {}
+            },
+            "NetworkMode": "default",
+            "PortBindings": {},
+            "RestartPolicy": {
+                "Name": "no",
+                "MaximumRetryCount": 0
+            },
+            "AutoRemove": false,
+            "VolumeDriver": "",
+            "VolumesFrom": null,
+            "CapAdd": null,
+            "CapDrop": null,
+            "Dns": [],
+            "DnsOptions": [],
+            "DnsSearch": [],
+            "ExtraHosts": null,
+            "GroupAdd": null,
+            "IpcMode": "shareable",
+            "Cgroup": "",
+            "Links": null,
+            "OomScoreAdj": 0,
+            "PidMode": "",
+            "Privileged": false,
+            "PublishAllPorts": false,
+            "ReadonlyRootfs": false,
+            "SecurityOpt": null,
+            "UTSMode": "",
+            "UsernsMode": "",
+            "ShmSize": 67108864,
+            "Runtime": "runc",
+            "ConsoleSize": [
+                0,
+                0
+            ],
+            "Isolation": "",
+            "CpuShares": 0,
+            "Memory": 0,
+            "NanoCpus": 0,
+            "CgroupParent": "",
+            "BlkioWeight": 0,
+            "BlkioWeightDevice": [],
+            "BlkioDeviceReadBps": null,
+            "BlkioDeviceWriteBps": null,
+            "BlkioDeviceReadIOps": null,
+            "BlkioDeviceWriteIOps": null,
+            "CpuPeriod": 0,
+            "CpuQuota": 0,
+            "CpuRealtimePeriod": 0,
+            "CpuRealtimeRuntime": 0,
+            "CpusetCpus": "",
+            "CpusetMems": "",
+            "Devices": [],
+            "DeviceCgroupRules": null,
+            "DiskQuota": 0,
+            "KernelMemory": 0,
+            "MemoryReservation": 0,
+            "MemorySwap": 0,
+            "MemorySwappiness": null,
+            "OomKillDisable": false,
+            "PidsLimit": 0,
+            "Ulimits": null,
+            "CpuCount": 0,
+            "CpuPercent": 0,
+            "IOMaximumIOps": 0,
+            "IOMaximumBandwidth": 0
+        },
+        "GraphDriver": {
+            "Data": {
+                "LowerDir": "/var/lib/docker/overlay2/f12e422ad15d9658a22cbff66b3094528d86bef355c1dd2eee28af2e019881e3-init/diff:/var/lib/docker/overlay2/101044f66b361e4f62f6b5ca1c9638e2310dd1fd445c40d182f635bbda80c804/diff:/var/lib/docker/overlay2/111a3cc00e98e3b092c114d8b62d6e506196c85170952319b7a448d0af94b0ba/diff:/var/lib/docker/overlay2/7b7ae02f567811248f66d404a9fad19ee700a73bd80e6118accb7f7fbb179d31/diff:/var/lib/docker/overlay2/b45ba8077e603fbc27d82dbf51bfb43aa47de9d6ec04c0a9c55e2b7c6232654a/diff:/var/lib/docker/overlay2/35a5fda69041bd73f378871100bba4f4a2b8e2aa0767c793d7938e3ab668612f/diff:/var/lib/docker/overlay2/61e1ea5ef4248fde8f56bfea7f701100885826a3743b08a8b315549b217805d6/diff:/var/lib/docker/overlay2/69cdd32c28f1953f61481fe4fb2f4a435c4ea5a080223dd2353897b330dd4ffd/diff:/var/lib/docker/overlay2/d556161bfe5c38647ec6314b4b0cddd926420c8c73312945144d21022f3c5cb2/diff:/var/lib/docker/overlay2/76339c3653e1519408e9069ed5910419190b344a0fe29a822eebfa7844a00226/diff",
+                "MergedDir": "/var/lib/docker/overlay2/f12e422ad15d9658a22cbff66b3094528d86bef355c1dd2eee28af2e019881e3/merged",
+                "UpperDir": "/var/lib/docker/overlay2/f12e422ad15d9658a22cbff66b3094528d86bef355c1dd2eee28af2e019881e3/diff",
+                "WorkDir": "/var/lib/docker/overlay2/f12e422ad15d9658a22cbff66b3094528d86bef355c1dd2eee28af2e019881e3/work"
+            },
+            "Name": "overlay2"
+        },
+        "Mounts": [
+            {
+                "Type": "bind",
+                "Source": "/Users/hoonhout/Github/xbeach-mi/example/sequential",
+                "Destination": "/data",
+                "Mode": "",
+                "RW": true,
+                "Propagation": "rprivate"
+            }
+        ],
+        "Config": {
+            "Hostname": "4c1eab459d59",
+            "Domainname": "",
+            "User": "",
+            "AttachStdin": false,
+            "AttachStdout": true,
+            "AttachStderr": true,
+            "Tty": false,
+            "OpenStdin": false,
+            "StdinOnce": false,
+            "Env": [
+                "no_proxy=*.local, 169.254/16",
+                "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+            ],
+            "Cmd": [
+                "xbeach-mi",
+                "config.json"
+            ],
+            "Image": "deltares/xbeach-mi",
+            "Volumes": null,
+            "WorkingDir": "/data",
+            "Entrypoint": null,
+            "OnBuild": null,
+            "Labels": {}
+        },
+        "NetworkSettings": {
+            "Bridge": "",
+            "SandboxID": "8705723ddb8b572481cf8e37568bc0db5bda9043f28f4a9f1e94560eb0b51335",
+            "HairpinMode": false,
+            "LinkLocalIPv6Address": "",
+            "LinkLocalIPv6PrefixLen": 0,
+            "Ports": {},
+            "SandboxKey": "/var/run/docker/netns/8705723ddb8b",
+            "SecondaryIPAddresses": null,
+            "SecondaryIPv6Addresses": null,
+            "EndpointID": "1900e59483650ec33497d1fcf7312538689edc330efac180ff6ca6d0ac816e39",
+            "Gateway": "172.17.0.1",
+            "GlobalIPv6Address": "",
+            "GlobalIPv6PrefixLen": 0,
+            "IPAddress": "172.17.0.4",
+            "IPPrefixLen": 16,
+            "IPv6Gateway": "",
+            "MacAddress": "02:42:ac:11:00:04",
+            "Networks": {
+                "bridge": {
+                    "IPAMConfig": null,
+                    "Links": null,
+                    "Aliases": null,
+                    "NetworkID": "c0c6952228f3d4ec1c962ba270bb1a15eab07e1c2244e6549928069e456e7b55",
+                    "EndpointID": "1900e59483650ec33497d1fcf7312538689edc330efac180ff6ca6d0ac816e39",
+                    "Gateway": "172.17.0.1",
+                    "IPAddress": "172.17.0.4",
+                    "IPPrefixLen": 16,
+                    "IPv6Gateway": "",
+                    "GlobalIPv6Address": "",
+                    "GlobalIPv6PrefixLen": 0,
+                    "MacAddress": "02:42:ac:11:00:04",
+                    "DriverOpts": null
+                }
+            }
+        }
+    }
+]
